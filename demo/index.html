@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Frost UI AuthCodeInput Demo</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fr0st/ui@latest/dist/frost-ui.min.css">
+    <link rel="stylesheet" href="assets/demo.css">
+    <script src="https://cdn.jsdelivr.net/npm/@fr0st/ui@latest/dist/frost-ui-bundle.min.js"></script>
+    <script src="../dist/frost-ui-authcodeinput.js"></script>
+    <script src="assets/demo.js"></script>
+</head>
+
+<body>
+    <header class="navbar bg-glass sticky-top border-bottom">
+        <div class="container d-flex align-items-center justify-content-between gap-3">
+            <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="#top">
+                <span class="badge bg-primary bg-gradient shadow-glow fs-5" aria-hidden="true">F</span>
+                <span>AuthCodeInput</span>
+            </a>
+            <div class="d-flex align-items-center gap-2">
+                <label class="small fw-bold mb-0" for="demo-theme">Theme</label>
+                <select class="input-outline input-sm w-auto rounded-pill" id="demo-theme" data-demo-theme>
+                    <option value="system">System</option>
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <main class="container py-4 py-lg-5" id="top">
+        <section class="card border-0 overflow-hidden shadow-lg mb-5">
+            <div class="row g-0 align-items-stretch">
+                <div class="col-lg-7 d-flex align-items-center bg-ambient">
+                    <div class="p-4 p-md-5">
+                        <span class="badge bg-primary-subtle text-primary-subtle mb-3">Frost UI v3 component</span>
+                        <h1 class="display-2 mb-4">Verification codes with <span class="text-gradient">less friction.</span></h1>
+                        <p class="lead text-body-secondary mb-4">Try segmented layouts, custom character rules, keyboard navigation, paste distribution, one-time-code autofill, and automatic form submission.</p>
+                        <nav class="d-flex flex-wrap gap-2" aria-label="Demo sections">
+                            <a class="btn btn-primary ripple" href="#styles">Explore styles</a>
+                            <a class="btn btn-secondary ripple" href="#methods-events">Try the API</a>
+                            <a class="btn btn-outline-primary ripple" href="#paste-otp">Test an OTP</a>
+                        </nav>
+                    </div>
+                </div>
+                <div class="col-lg-5 d-flex align-items-center bg-glass border-start">
+                    <div class="p-4 p-md-5 w-100">
+                        <small class="text-body-secondary d-block mb-2">Live six-digit example</small>
+                        <label class="fw-bold" for="hero-code">Enter a verification code</label>
+                        <div class="demo-auth-code mt-2">
+                            <input
+                                id="hero-code"
+                                name="heroCode"
+                                data-ui-toggle="authcodeinput"
+                                data-ui-length="[3, 3]"
+                                inputmode="numeric">
+                        </div>
+                        <p class="form-text mb-0">Type, use the arrow keys, or paste all six digits.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-5" id="styles">
+            <header class="border-bottom pb-3 mb-4">
+                <span class="text-primary fw-bold">Input presentation</span>
+                <h2 class="h3 mb-1">Filled and outline styles</h2>
+                <p class="text-body-secondary mb-0">Both variants use Frost UI's native form backgrounds, borders, focus lines, focus rings, and theme tokens.</p>
+            </header>
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-body p-4">
+                            <span class="badge bg-secondary-subtle text-secondary-subtle mb-3">Default</span>
+                            <h3 class="h5">Outline</h3>
+                            <p class="text-body-secondary">Keeps a visible boundary around each character.</p>
+                            <label for="outline-code">Outline code</label>
+                            <div class="demo-auth-code mt-2">
+                                <input id="outline-code" data-ui-toggle="authcodeinput" data-ui-style="outline">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-body p-4">
+                            <span class="badge bg-accent-subtle text-accent-subtle mb-3">Alternative</span>
+                            <h3 class="h5">Filled</h3>
+                            <p class="text-body-secondary">Uses the UI v3 tinted surface and focus-line treatment.</p>
+                            <label for="filled-code">Filled code</label>
+                            <div class="demo-auth-code mt-2">
+                                <input id="filled-code" data-ui-toggle="authcodeinput" data-ui-style="filled">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-5" id="lengths">
+            <header class="border-bottom pb-3 mb-4">
+                <span class="text-accent fw-bold">Layout options</span>
+                <h2 class="h3 mb-1">Grouped and custom lengths</h2>
+                <p class="text-body-secondary mb-0">Use a number for one continuous group or an array to divide the code into readable segments.</p>
+            </header>
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <div class="card card-body h-100 p-4">
+                        <h3 class="h5">Default 3–3</h3>
+                        <code class="mb-3">[3, 3]</code>
+                        <label for="length-default">Six characters</label>
+                        <div class="demo-auth-code mt-2">
+                            <input id="length-default" data-ui-toggle="authcodeinput" data-ui-length="[3, 3]">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card card-body h-100 p-4">
+                        <h3 class="h5">Continuous</h3>
+                        <code class="mb-3">4</code>
+                        <label for="length-continuous">Four characters</label>
+                        <div class="demo-auth-code mt-2">
+                            <input id="length-continuous" data-ui-toggle="authcodeinput" data-ui-length="4">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card card-body h-100 p-4">
+                        <h3 class="h5">Custom 2–3–2</h3>
+                        <code class="mb-3">[2, 3, 2]</code>
+                        <label for="length-custom">Seven characters</label>
+                        <div class="demo-auth-code mt-2">
+                            <input id="length-custom" data-ui-toggle="authcodeinput" data-ui-length="[2, 3, 2]">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-5" id="patterns">
+            <header class="border-bottom pb-3 mb-4">
+                <span class="text-success fw-bold">Character filtering</span>
+                <h2 class="h3 mb-1">Custom character patterns</h2>
+                <p class="text-body-secondary mb-0">Each typed or pasted character is filtered through the configured regular-expression source.</p>
+            </header>
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card card-body h-100 p-4">
+                        <h3 class="h5">Uppercase letters</h3>
+                        <p class="text-body-secondary"><code>[A-Z]</code> rejects numbers and lowercase letters.</p>
+                        <label for="pattern-letters">Letter code</label>
+                        <div class="demo-auth-code mt-2">
+                            <input
+                                id="pattern-letters"
+                                data-ui-toggle="authcodeinput"
+                                data-ui-length="6"
+                                data-ui-reg-exp="[A-Z]">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card card-body h-100 p-4">
+                        <h3 class="h5">Uppercase alphanumeric</h3>
+                        <p class="text-body-secondary"><code>[A-Z0-9]</code> accepts letters and digits.</p>
+                        <label for="pattern-alphanumeric">Account code</label>
+                        <div class="demo-auth-code mt-2">
+                            <input
+                                id="pattern-alphanumeric"
+                                data-ui-toggle="authcodeinput"
+                                data-ui-length="[3, 3]"
+                                data-ui-reg-exp="[A-Z0-9]"
+                                data-ui-style="filled">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-5" id="states">
+            <header class="border-bottom pb-3 mb-4">
+                <span class="text-primary fw-bold">Component state</span>
+                <h2 class="h3 mb-1">Initial and disabled states</h2>
+                <p class="text-body-secondary mb-0">Existing values are distributed during initialization, and native disabled state is mirrored to every generated input.</p>
+            </header>
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card card-body h-100 p-4">
+                        <h3 class="h5">Initial value</h3>
+                        <p class="text-body-secondary">The original form value remains synchronized.</p>
+                        <label for="state-initial">Saved code</label>
+                        <div class="demo-auth-code mt-2">
+                            <input id="state-initial" data-ui-toggle="authcodeinput" value="482901">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card card-body h-100 p-4">
+                        <h3 class="h5">Disabled</h3>
+                        <p class="text-body-secondary">Disabled controls are excluded from interaction and submission.</p>
+                        <label for="state-disabled">Unavailable code</label>
+                        <div class="demo-auth-code mt-2">
+                            <input id="state-disabled" data-ui-toggle="authcodeinput" value="730118" disabled>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-5" id="methods-events">
+            <header class="border-bottom pb-3 mb-4">
+                <span class="text-accent fw-bold">Programmatic API</span>
+                <h2 class="h3 mb-1">Methods and events</h2>
+                <p class="text-body-secondary mb-0">Control an instance directly and watch namespaced change events generated by typing, paste, and backspace.</p>
+            </header>
+            <div class="row g-4">
+                <div class="col-xl-7">
+                    <div class="card h-100">
+                        <div class="card-body p-4">
+                            <label for="methods-code">Interactive instance</label>
+                            <div class="demo-auth-code mt-2 mb-4">
+                                <input id="methods-code" data-ui-toggle="authcodeinput">
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                <button class="btn btn-primary ripple" data-demo-method="init" type="button">Init</button>
+                                <button class="btn btn-outline-danger ripple" data-demo-method="dispose" type="button">Dispose</button>
+                                <button class="btn btn-outline-success ripple" data-demo-method="enable" type="button">Enable</button>
+                                <button class="btn btn-outline-warning ripple" data-demo-method="disable" type="button">Disable</button>
+                                <button class="btn btn-secondary ripple" data-demo-method="setValue" type="button">Set value</button>
+                                <button class="btn btn-secondary ripple" data-demo-method="getValue" type="button">Get value</button>
+                                <button class="btn btn-secondary ripple" data-demo-method="clear" type="button">Clear</button>
+                            </div>
+                            <output class="small text-body-secondary" id="method-output" aria-live="polite">Ready.</output>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-5">
+                    <div class="card h-100">
+                        <div class="card-header d-flex align-items-center justify-content-between gap-2">
+                            <strong>Event log</strong>
+                            <code>change.ui.authcodeinput</code>
+                        </div>
+                        <div class="card-body demo-event-log overflow-y-auto" id="event-log" role="log" aria-live="polite">
+                            <p class="small text-body-secondary mb-0">Interact with the input to log value changes.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-5" id="auto-submit">
+            <header class="border-bottom pb-3 mb-4">
+                <span class="text-success fw-bold">Form integration</span>
+                <h2 class="h3 mb-1">Auto-submit</h2>
+                <p class="text-body-secondary mb-0">Completing the code calls <code>requestSubmit()</code> on the closest form, preserving normal validation and submit events.</p>
+            </header>
+            <div class="card bg-glass">
+                <div class="card-body p-4 p-md-5">
+                    <form id="auto-submit-form">
+                        <div class="row g-4 align-items-end">
+                            <div class="col-lg">
+                                <label for="auto-submit-code">Enter any four digits</label>
+                                <div class="demo-auth-code mt-2">
+                                    <input
+                                        id="auto-submit-code"
+                                        name="verificationCode"
+                                        data-ui-toggle="authcodeinput"
+                                        data-ui-auto-submit="true"
+                                        data-ui-length="4"
+                                        data-ui-style="filled"
+                                        required>
+                                </div>
+                            </div>
+                            <div class="col-lg-auto">
+                                <button class="btn btn-outline-secondary ripple" id="auto-submit-clear" type="button">Clear and try again</button>
+                            </div>
+                        </div>
+                    </form>
+                    <div class="alert alert-info mt-4 mb-0" id="auto-submit-status" role="status">Waiting for a complete code.</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-5" id="paste-otp">
+            <header class="border-bottom pb-3 mb-4">
+                <span class="text-primary fw-bold">Fast code entry</span>
+                <h2 class="h3 mb-1">Paste and mobile OTP behavior</h2>
+                <p class="text-body-secondary mb-0">Paste distributes valid characters across the remaining inputs. The first generated input advertises <code>autocomplete="one-time-code"</code> for supported mobile browsers.</p>
+            </header>
+            <div class="row g-4 align-items-stretch">
+                <div class="col-lg-7">
+                    <div class="card h-100">
+                        <div class="card-body p-4 p-md-5">
+                            <label for="otp-code">One-time password</label>
+                            <div class="demo-auth-code mt-2">
+                                <input
+                                    id="otp-code"
+                                    name="otp"
+                                    data-ui-toggle="authcodeinput"
+                                    data-ui-length="[3, 3]"
+                                    autocomplete="one-time-code"
+                                    inputmode="numeric">
+                            </div>
+                            <p class="form-text">Focus the first field and paste the complete sample code.</p>
+                            <div class="d-flex flex-wrap align-items-center gap-3 mt-4">
+                                <code class="fs-5 fw-bold font-monospace">739204</code>
+                                <button
+                                    class="btn btn-primary ripple"
+                                    id="copy-otp"
+                                    data-ui-toggle="clipboard"
+                                    data-ui-text="739204"
+                                    type="button">
+                                    Copy sample OTP
+                                </button>
+                            </div>
+                            <output class="small text-body-secondary d-block mt-3" id="copy-otp-status" aria-live="polite">Copy the sample, then paste it into the first character field.</output>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <aside class="card card-body h-100 p-4 bg-ambient">
+                        <span class="badge bg-primary-subtle text-primary-subtle align-self-start mb-3">Mobile note</span>
+                        <h3 class="h5">SMS code suggestions</h3>
+                        <p class="text-body-secondary">On supported devices, a correctly formatted verification SMS can surface above the keyboard. Selecting it fills the first field, and AuthCodeInput distributes the complete value.</p>
+                        <ul class="small mb-0">
+                            <li>Use a numeric <code>inputmode</code> for digit-only codes.</li>
+                            <li>Keep a visible label and clear instructions.</li>
+                            <li>Do not block normal paste behavior.</li>
+                        </ul>
+                    </aside>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="border-top bg-glass">
+        <div class="container py-4 d-flex flex-wrap justify-content-between gap-2">
+            <span class="text-body-secondary">Frost UI AuthCodeInput</span>
+            <a href="https://github.com/frost-js/ui-authcodeinput">View the repository</a>
+        </div>
+    </footer>
+
+    <script>
+        $('[data-ui-toggle="authcodeinput"]').authcodeinput();
+
+        $.addEvent('#methods-code', 'change.ui.authcodeinput', (event) => {
+            const entry = $.create('div', {
+                class: 'small font-monospace py-2 border-bottom',
+            });
+
+            $.setText(entry, `change.ui.authcodeinput — value: "${event.currentTarget.value}"`);
+            $.append('#event-log', entry);
+            $.setScrollY('#event-log', $.height('#event-log', { boxSize: $.SCROLL_BOX }));
+        });
+
+        $('[data-demo-method]').addEvent('click', (event) => {
+            const method = $.getDataset(event.currentTarget, 'demoMethod');
+            const instance = method === 'dispose' ?
+                $.getData('#methods-code', 'authcodeinput') :
+                UI.AuthCodeInput.init($.findOne('#methods-code'));
+
+            switch (method) {
+                case 'init':
+                    $.setText('#method-output', 'Initialized.');
+                    break;
+                case 'dispose':
+                    if (instance) {
+                        instance.dispose();
+                        $.setText('#method-output', 'Disposed; the original input is restored.');
+                    } else {
+                        $.setText('#method-output', 'Already disposed.');
+                    }
+                    break;
+                case 'enable':
+                    instance.enable();
+                    $.setText('#method-output', 'Enabled.');
+                    break;
+                case 'disable':
+                    instance.disable();
+                    $.setText('#method-output', 'Disabled.');
+                    break;
+                case 'setValue':
+                    instance.setValue('314159');
+                    $.setText('#method-output', 'Value set to 314159.');
+                    break;
+                case 'getValue':
+                    $.setText('#method-output', `Current value: "${instance.getValue()}"`);
+                    break;
+                case 'clear':
+                    instance.clear();
+                    $.setText('#method-output', 'Cleared.');
+                    break;
+            }
+        });
+
+        let submitCount = 0;
+
+        $.addEvent('#auto-submit-form', 'submit', (event) => {
+            event.preventDefault();
+            submitCount++;
+            $.setText(
+                '#auto-submit-status',
+                `Submit event ${submitCount} received with value "${$.getValue('#auto-submit-code')}".`,
+            );
+        });
+
+        $.addEvent('#auto-submit-clear', 'click', () => {
+            $.getData('#auto-submit-code', 'authcodeinput').clear();
+            $.setText('#auto-submit-status', 'Cleared. Enter another complete code.');
+            $.focus('#auto-submit-code');
+        });
+
+        $.addEvent('#copy-otp', 'copied.ui.clipboard', () => {
+            $.setText(
+                '#copy-otp-status',
+                'Copied 739204. Focus the first character field and paste.',
+            );
+        });
+    </script>
+</body>
+
+</html>
