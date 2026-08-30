@@ -16,10 +16,12 @@ import { BaseComponent } from '@fr0st/ui';
  */
 export default class AuthCodeInput extends BaseComponent {
     #container;
+    #hidden;
     #inputs;
     #length;
     #regExp;
     #segments;
+    #tabIndex;
 
     /**
      * Creates an AuthCodeInput.
@@ -70,9 +72,19 @@ export default class AuthCodeInput extends BaseComponent {
     /** @inheritdoc */
     dispose() {
         $.remove(this.#container);
-        $.removeAttribute(this.node, 'tabindex');
         $.removeEvent(this.node, 'focus.ui.authcodeinput');
-        $.removeClass(this.node, this.constructor.classes.hide);
+
+        if (this.#hidden) {
+            $.addClass(this.node, this.constructor.classes.hide);
+        } else {
+            $.removeClass(this.node, this.constructor.classes.hide);
+        }
+
+        if (this.#tabIndex === null) {
+            $.removeAttribute(this.node, 'tabindex');
+        } else {
+            $.setAttribute(this.node, { tabindex: this.#tabIndex });
+        }
 
         this.#container = null;
         this.#inputs = null;
@@ -108,6 +120,35 @@ export default class AuthCodeInput extends BaseComponent {
     }
 
     /**
+     * Distributes a value across the rendered inputs.
+     * @param {string} value The value to distribute.
+     * @param {number} startIndex The first input index.
+     * @returns {boolean} Whether any valid characters were distributed.
+     */
+    #distributeValue(value, startIndex) {
+        const chars = this.#getValidCharacters(value)
+            .slice(0, this.#inputs.length - startIndex);
+
+        if (!chars.length) {
+            return false;
+        }
+
+        for (const [offset, char] of chars.entries()) {
+            $.setValue(this.#inputs[startIndex + offset], char);
+        }
+
+        this.#updateValue();
+
+        const focusIndex = Math.min(
+            startIndex + chars.length,
+            this.#inputs.length - 1,
+        );
+        $.focus(this.#inputs[focusIndex]);
+
+        return true;
+    }
+
+    /**
      * Attaches events for the AuthCodeInput.
      */
     #events() {
@@ -130,9 +171,19 @@ export default class AuthCodeInput extends BaseComponent {
 
         $.addEventDelegate(this.#container, 'input.ui.authcodeinput', 'input', (e) => {
             const target = e.currentTarget;
+            const targetIndex = this.#inputs.indexOf(target);
             let value = $.getValue(target);
 
-            if (value && !value.match(this.#regExp)) {
+            if (Array.from(value).length > 1) {
+                if (!this.#distributeValue(value, targetIndex)) {
+                    $.setValue(target, '');
+                    this.#updateValue();
+                }
+
+                return;
+            }
+
+            if (value && !this.#getValidCharacters(value).length) {
                 value = '';
                 $.setValue(target, value);
             }
@@ -143,11 +194,19 @@ export default class AuthCodeInput extends BaseComponent {
                 return;
             }
 
-            const targetIndex = this.#inputs.indexOf(target);
-
             if (targetIndex < this.#inputs.length - 1) {
                 $.focus(this.#inputs[targetIndex + 1]);
             }
+        });
+
+        $.addEventDelegate(this.#container, 'paste.ui.authcodeinput', 'input', (e) => {
+            const value = e.clipboardData.getData('text');
+
+            e.preventDefault();
+            this.#distributeValue(
+                value,
+                this.#inputs.indexOf(e.currentTarget),
+            );
         });
 
         $.addEventDelegate(this.#container, 'keydown.ui.authcodeinput', 'input', (e) => {
@@ -155,16 +214,28 @@ export default class AuthCodeInput extends BaseComponent {
             const targetIndex = this.#inputs.indexOf(target);
 
             switch (e.code) {
-                case 'ArrowLeft':
-                    if (targetIndex > 0) {
-                        $.focus(this.#inputs[targetIndex - 1]);
+                case 'ArrowLeft': {
+                    const offset = $.css(this.#container, 'direction') === 'rtl' ? 1 : -1;
+                    const nextIndex = targetIndex + offset;
+
+                    if (nextIndex < 0 || nextIndex >= this.#inputs.length) {
+                        return;
                     }
+
+                    $.focus(this.#inputs[nextIndex]);
                     break;
-                case 'ArrowRight':
-                    if (targetIndex < this.#inputs.length - 1) {
-                        $.focus(this.#inputs[targetIndex + 1]);
+                }
+                case 'ArrowRight': {
+                    const offset = $.css(this.#container, 'direction') === 'rtl' ? -1 : 1;
+                    const nextIndex = targetIndex + offset;
+
+                    if (nextIndex < 0 || nextIndex >= this.#inputs.length) {
+                        return;
                     }
+
+                    $.focus(this.#inputs[nextIndex]);
                     break;
+                }
                 case 'Backspace':
                     if ($.getValue(target)) {
                         $.setValue(target, '');
@@ -185,6 +256,16 @@ export default class AuthCodeInput extends BaseComponent {
 
             e.preventDefault();
         });
+    }
+
+    /**
+     * Gets the valid characters from a value.
+     * @param {string} value The value to filter.
+     * @returns {string[]} The valid characters.
+     */
+    #getValidCharacters(value) {
+        return Array.from(value)
+            .filter((char) => char.match(this.#regExp));
     }
 
     /**
@@ -221,10 +302,37 @@ export default class AuthCodeInput extends BaseComponent {
      * Renders the AuthCodeInput.
      */
     #render() {
-        this.#container = $.create('div', {
+        this.#hidden = $.hasClass(this.node, this.constructor.classes.hide);
+        this.#tabIndex = $.getAttribute(this.node, 'tabindex');
+
+        const containerOptions = {
             class: this.constructor.classes.container,
-        });
+        };
+        const direction = $.getAttribute(this.node, 'dir');
+
+        if (direction) {
+            containerOptions.attributes = { dir: direction };
+        }
+
+        this.#container = $.create('div', containerOptions);
         this.#inputs = [];
+
+        const inputMode = $.getAttribute(this.node, 'inputmode') ||
+            (this.options.regExp === '[0-9]' ? 'numeric' : 'text');
+        const required = $.is(this.node, ':required');
+        const inheritedAttributes = Object.fromEntries(
+            [
+                'aria-describedby',
+                'aria-errormessage',
+                'aria-invalid',
+                'aria-required',
+            ]
+                .map((attribute) => [
+                    attribute,
+                    $.getAttribute(this.node, attribute),
+                ])
+                .filter(([, value]) => value !== null),
+        );
 
         let inputIndex = 0;
 
@@ -237,6 +345,21 @@ export default class AuthCodeInput extends BaseComponent {
             }
 
             for (let i = 0; i < length; i++) {
+                const attributes = {
+                    ...inheritedAttributes,
+                    'type': 'text',
+                    'maxlength': 1,
+                    'size': 1,
+                    'pattern': this.options.regExp,
+                    'inputmode': inputMode,
+                    'autocomplete': inputIndex ? 'off' : 'one-time-code',
+                    'aria-label': this.options.getAriaLabel(++inputIndex),
+                };
+
+                if (required) {
+                    attributes.required = true;
+                }
+
                 const formInput = $.create('div', {
                     class: this.constructor.classes.inputContainer,
                 });
@@ -245,15 +368,7 @@ export default class AuthCodeInput extends BaseComponent {
                         `input-${this.options.style}`,
                         this.constructor.classes.input,
                     ],
-                    attributes: {
-                        'type': 'text',
-                        'required': true,
-                        'maxlength': 1,
-                        'size': 1,
-                        'pattern': this.options.regExp,
-                        'autocomplete': 'off',
-                        'aria-label': this.options.getAriaLabel(++inputIndex),
-                    },
+                    attributes,
                 });
 
                 $.append(formInput, input);

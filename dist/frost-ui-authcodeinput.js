@@ -48,10 +48,12 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 	*/
 	var AuthCodeInput = class extends _fr0st_ui.BaseComponent {
 		#container;
+		#hidden;
 		#inputs;
 		#length;
 		#regExp;
 		#segments;
+		#tabIndex;
 		/**
 		* Creates an AuthCodeInput.
 		* @param {HTMLElement} node The input node.
@@ -89,9 +91,11 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		/** @inheritdoc */
 		dispose() {
 			_fr0st_query.default.remove(this.#container);
-			_fr0st_query.default.removeAttribute(this.node, "tabindex");
 			_fr0st_query.default.removeEvent(this.node, "focus.ui.authcodeinput");
-			_fr0st_query.default.removeClass(this.node, this.constructor.classes.hide);
+			if (this.#hidden) _fr0st_query.default.addClass(this.node, this.constructor.classes.hide);
+			else _fr0st_query.default.removeClass(this.node, this.constructor.classes.hide);
+			if (this.#tabIndex === null) _fr0st_query.default.removeAttribute(this.node, "tabindex");
+			else _fr0st_query.default.setAttribute(this.node, { tabindex: this.#tabIndex });
 			this.#container = null;
 			this.#inputs = null;
 			this.#regExp = null;
@@ -121,6 +125,21 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			this.#refresh();
 		}
 		/**
+		* Distributes a value across the rendered inputs.
+		* @param {string} value The value to distribute.
+		* @param {number} startIndex The first input index.
+		* @returns {boolean} Whether any valid characters were distributed.
+		*/
+		#distributeValue(value, startIndex) {
+			const chars = this.#getValidCharacters(value).slice(0, this.#inputs.length - startIndex);
+			if (!chars.length) return false;
+			for (const [offset, char] of chars.entries()) _fr0st_query.default.setValue(this.#inputs[startIndex + offset], char);
+			this.#updateValue();
+			const focusIndex = Math.min(startIndex + chars.length, this.#inputs.length - 1);
+			_fr0st_query.default.focus(this.#inputs[focusIndex]);
+			return true;
+		}
+		/**
 		* Attaches events for the AuthCodeInput.
 		*/
 		#events() {
@@ -137,26 +156,44 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			});
 			_fr0st_query.default.addEventDelegate(this.#container, "input.ui.authcodeinput", "input", (e) => {
 				const target = e.currentTarget;
+				const targetIndex = this.#inputs.indexOf(target);
 				let value = _fr0st_query.default.getValue(target);
-				if (value && !value.match(this.#regExp)) {
+				if (Array.from(value).length > 1) {
+					if (!this.#distributeValue(value, targetIndex)) {
+						_fr0st_query.default.setValue(target, "");
+						this.#updateValue();
+					}
+					return;
+				}
+				if (value && !this.#getValidCharacters(value).length) {
 					value = "";
 					_fr0st_query.default.setValue(target, value);
 				}
 				this.#updateValue();
 				if (!value) return;
-				const targetIndex = this.#inputs.indexOf(target);
 				if (targetIndex < this.#inputs.length - 1) _fr0st_query.default.focus(this.#inputs[targetIndex + 1]);
+			});
+			_fr0st_query.default.addEventDelegate(this.#container, "paste.ui.authcodeinput", "input", (e) => {
+				const value = e.clipboardData.getData("text");
+				e.preventDefault();
+				this.#distributeValue(value, this.#inputs.indexOf(e.currentTarget));
 			});
 			_fr0st_query.default.addEventDelegate(this.#container, "keydown.ui.authcodeinput", "input", (e) => {
 				const target = e.currentTarget;
 				const targetIndex = this.#inputs.indexOf(target);
 				switch (e.code) {
-					case "ArrowLeft":
-						if (targetIndex > 0) _fr0st_query.default.focus(this.#inputs[targetIndex - 1]);
+					case "ArrowLeft": {
+						const nextIndex = targetIndex + (_fr0st_query.default.css(this.#container, "direction") === "rtl" ? 1 : -1);
+						if (nextIndex < 0 || nextIndex >= this.#inputs.length) return;
+						_fr0st_query.default.focus(this.#inputs[nextIndex]);
 						break;
-					case "ArrowRight":
-						if (targetIndex < this.#inputs.length - 1) _fr0st_query.default.focus(this.#inputs[targetIndex + 1]);
+					}
+					case "ArrowRight": {
+						const nextIndex = targetIndex + (_fr0st_query.default.css(this.#container, "direction") === "rtl" ? -1 : 1);
+						if (nextIndex < 0 || nextIndex >= this.#inputs.length) return;
+						_fr0st_query.default.focus(this.#inputs[nextIndex]);
 						break;
+					}
 					case "Backspace":
 						if (_fr0st_query.default.getValue(target)) {
 							_fr0st_query.default.setValue(target, "");
@@ -172,6 +209,14 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				}
 				e.preventDefault();
 			});
+		}
+		/**
+		* Gets the valid characters from a value.
+		* @param {string} value The value to filter.
+		* @returns {string[]} The valid characters.
+		*/
+		#getValidCharacters(value) {
+			return Array.from(value).filter((char) => char.match(this.#regExp));
 		}
 		/**
 		* Refreshes the rendered input values.
@@ -198,8 +243,21 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		* Renders the AuthCodeInput.
 		*/
 		#render() {
-			this.#container = _fr0st_query.default.create("div", { class: this.constructor.classes.container });
+			this.#hidden = _fr0st_query.default.hasClass(this.node, this.constructor.classes.hide);
+			this.#tabIndex = _fr0st_query.default.getAttribute(this.node, "tabindex");
+			const containerOptions = { class: this.constructor.classes.container };
+			const direction = _fr0st_query.default.getAttribute(this.node, "dir");
+			if (direction) containerOptions.attributes = { dir: direction };
+			this.#container = _fr0st_query.default.create("div", containerOptions);
 			this.#inputs = [];
+			const inputMode = _fr0st_query.default.getAttribute(this.node, "inputmode") || (this.options.regExp === "[0-9]" ? "numeric" : "text");
+			const required = _fr0st_query.default.is(this.node, ":required");
+			const inheritedAttributes = Object.fromEntries([
+				"aria-describedby",
+				"aria-errormessage",
+				"aria-invalid",
+				"aria-required"
+			].map((attribute) => [attribute, _fr0st_query.default.getAttribute(this.node, attribute)]).filter(([, value]) => value !== null));
 			let inputIndex = 0;
 			for (const [segmentIndex, length] of this.#segments.entries()) {
 				if (segmentIndex > 0) {
@@ -207,18 +265,21 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 					_fr0st_query.default.append(this.#container, divider);
 				}
 				for (let i = 0; i < length; i++) {
+					const attributes = {
+						...inheritedAttributes,
+						"type": "text",
+						"maxlength": 1,
+						"size": 1,
+						"pattern": this.options.regExp,
+						"inputmode": inputMode,
+						"autocomplete": inputIndex ? "off" : "one-time-code",
+						"aria-label": this.options.getAriaLabel(++inputIndex)
+					};
+					if (required) attributes.required = true;
 					const formInput = _fr0st_query.default.create("div", { class: this.constructor.classes.inputContainer });
 					const input = _fr0st_query.default.create("input", {
 						class: [`input-${this.options.style}`, this.constructor.classes.input],
-						attributes: {
-							"type": "text",
-							"required": true,
-							"maxlength": 1,
-							"size": 1,
-							"pattern": this.options.regExp,
-							"autocomplete": "off",
-							"aria-label": this.options.getAriaLabel(++inputIndex)
-						}
+						attributes
 					});
 					_fr0st_query.default.append(formInput, input);
 					this.#inputs.push(input);
