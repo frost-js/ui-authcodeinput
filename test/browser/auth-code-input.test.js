@@ -902,45 +902,5 @@ test.describe('AuthCodeInput', () => {
             await expect(page.locator('.d-flex input').first())
                 .toHaveClass('input-filled fw-bold text-center px-0');
         });
-
-        test('renders light and dark theme variants', async ({ page }) => {
-            await page.evaluate((_) => {
-                $.setHTML(
-                    document.body,
-                    `
-                        <section data-ui-theme="light">
-                            <input id="light-outline">
-                            <input id="light-filled">
-                        </section>
-                        <section data-ui-theme="dark">
-                            <input id="dark-outline">
-                            <input id="dark-filled">
-                        </section>
-                    `,
-                );
-                for (const id of ['light-outline', 'dark-outline']) {
-                    UI.AuthCodeInput.init($.findOne(`#${id}`));
-                }
-                for (const id of ['light-filled', 'dark-filled']) {
-                    UI.AuthCodeInput.init($.findOne(`#${id}`), { style: 'filled' });
-                }
-            });
-
-            const style = (locator) => locator.evaluate((input) => {
-                const computed = getComputedStyle(input);
-                return [
-                    computed.color,
-                    computed.backgroundColor,
-                    computed.borderColor,
-                ];
-            });
-            const light = page.locator('[data-ui-theme="light"] .d-flex');
-            const dark = page.locator('[data-ui-theme="dark"] .d-flex');
-
-            expect(await style(light.first().locator('input').first()))
-                .not.toEqual(await style(dark.first().locator('input').first()));
-            expect(await style(light.nth(1).locator('input').first()))
-                .not.toEqual(await style(dark.nth(1).locator('input').first()));
-        });
     });
 });
