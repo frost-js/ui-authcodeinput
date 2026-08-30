@@ -1,22 +1,43 @@
 {
     "name": "@fr0st/ui-authcodeinput",
-    "version": "2.0.15",
-    "description": "FrostUI-AuthCodeInput is a free, open-source Auth Code Input component for Javascript.",
+    "version": "3.0.0",
+    "private": false,
+    "description": "Segmented authentication code input component for Frost UI with validation, keyboard navigation, and optional form submission.",
     "keywords": [
-        "ui",
-        "component",
         "authentication",
         "code",
-        "front-end",
-        "web"
+        "component",
+        "frost",
+        "frontend",
+        "javascript",
+        "one-time-password",
+        "otp",
+        "ui"
     ],
-    "homepage": "https://github.com/elusivecodes/FrostUI-AuthCodeInput",
+    "homepage": "https://github.com/frost-js/ui-authcodeinput",
     "bugs": {
-        "url": "https://github.com/elusivecodes/FrostUI-AuthCodeInput/issues",
+        "url": "https://github.com/frost-js/ui-authcodeinput/issues",
         "email": "elusivecodes@gmail.com"
     },
-    "main": "src/index.js",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/frost-js/ui-authcodeinput.git"
+    },
+    "license": "MIT",
+    "author": "Elusive <elusivecodes@gmail.com>",
     "type": "module",
+    "exports": {
+        ".": {
+            "import": "./dist/frost-ui-authcodeinput.esm.js",
+            "default": "./dist/frost-ui-authcodeinput.esm.js"
+        },
+        "./dist/*": "./dist/*",
+        "./src/*": "./src/*"
+    },
+    "main": "./dist/frost-ui-authcodeinput.esm.js",
+    "jsdelivr": "./dist/frost-ui-authcodeinput.min.js",
+    "unpkg": "./dist/frost-ui-authcodeinput.min.js",
+    "module": "./dist/frost-ui-authcodeinput.esm.js",
     "files": [
         "dist",
         "LICENSE",
@@ -24,23 +45,34 @@
         "src"
     ],
     "scripts": {
-        "build": "npm run js-compile && npm run js-minify",
-        "js-compile": "rollup --config",
-        "js-lint": "eslint",
-        "js-minify": "terser --compress passes=2 --mangle --source-map \"content=dist/frost-ui-authcodeinput.js.map\" --output dist/frost-ui-authcodeinput.min.js dist/frost-ui-authcodeinput.js"
+        "build": "vite build && vite build --mode umd",
+        "lint": "eslint",
+        "test": "npm run build && npm run test:browser",
+        "test:browser": "playwright test --forbid-only",
+        "test:coverage": "playwright test --config=playwright.coverage.config.js --forbid-only",
+        "test:headed": "playwright test --forbid-only --headed",
+        "test:ui": "playwright test --ui"
     },
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/elusivecodes/FrostUI-AuthCodeInput.git"
-    },
-    "author": "Elusive",
-    "license": "MIT",
-    "private": false,
+    "browserslist": [
+        "baseline newly available"
+    ],
     "devDependencies": {
-        "@fr0st/eslint-config": "^1.0.3",
-        "@rollup/plugin-node-resolve": "^16.0.1",
-        "eslint": "^9.26.0",
-        "rollup": "^4.40.2",
-        "terser": "^5.39.1"
+        "@fr0st/eslint-config": "^5.0.3",
+        "@fr0st/query": "^4.1.2",
+        "@fr0st/ui": "^3.0.0",
+        "@playwright/test": "^1.62.1",
+        "eslint": "^10.9.1",
+        "monocart-reporter": "^2.12.6",
+        "vite": "^8.2.2"
+    },
+    "peerDependencies": {
+        "@fr0st/query": "^4.1.2",
+        "@fr0st/ui": "^3.0.0"
+    },
+    "engines": {
+        "node": "^20.19.0 || ^22.13.0 || >=24"
+    },
+    "publishConfig": {
+        "access": "public"
     }
 }
