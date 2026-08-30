@@ -357,7 +357,7 @@ export default class AuthCodeInput extends BaseComponent {
                 };
 
                 if (required) {
-                    attributes.required = true;
+                    attributes.required = '';
                 }
 
                 const formInput = $.create('div', {

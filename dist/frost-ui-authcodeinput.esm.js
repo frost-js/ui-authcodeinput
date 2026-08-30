@@ -243,7 +243,7 @@ var AuthCodeInput = class extends BaseComponent {
 					"autocomplete": inputIndex ? "off" : "one-time-code",
 					"aria-label": this.options.getAriaLabel(++inputIndex)
 				};
-				if (required) attributes.required = true;
+				if (required) attributes.required = "";
 				const formInput = $.create("div", { class: this.constructor.classes.inputContainer });
 				const input = $.create("input", {
 					class: [`input-${this.options.style}`, this.constructor.classes.input],

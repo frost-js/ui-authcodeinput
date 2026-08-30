@@ -49,14 +49,9 @@ test.describe('AuthCodeInput', () => {
                 const auth = $.findOne('#auth');
                 const first = UI.AuthCodeInput.init(auth, { length: 4 });
                 const second = UI.AuthCodeInput.init(auth, { length: 2 });
-                return {
-                    inputCount: $.find('input', $.prev(auth).shift()).length,
-                    sameInstance: first === second,
-                };
-            })).toEqual({
-                inputCount: 4,
-                sameInstance: true,
-            });
+                return first === second;
+            })).toBe(true);
+            await expect(page.locator('.d-flex input')).toHaveCount(4);
         });
 
         test('exposes frozen default options', async ({ page }) => {
@@ -86,17 +81,22 @@ test.describe('AuthCodeInput', () => {
                 UI.AuthCodeInput.init($.findOne('#auth'));
             });
 
-            expect(await page.locator('.d-flex input').evaluateAll((inputs) =>
-                inputs.map((input) => input.value))).toEqual(['1', '2', '3', '4', '', '']);
+            const inputs = page.locator('.d-flex input');
+            const values = ['1', '2', '3', '4', '', ''];
+            await expect(inputs).toHaveCount(values.length);
+            for (const [index, value] of values.entries()) {
+                await expect(inputs.nth(index)).toHaveValue(value);
+            }
             await expect(page.locator('#auth')).toHaveValue('1234');
         });
 
         test('filters an initial value', async ({ page }) => {
-            expect(await page.evaluate((_) => {
+            await page.evaluate((_) => {
                 $.setHTML(document.body, '<input id="auth" value="1a2-3">');
                 UI.AuthCodeInput.init($.findOne('#auth'));
-                return $.getValue('#auth');
-            })).toBe('123');
+            });
+
+            await expect(page.locator('#auth')).toHaveValue('123');
         });
     });
 
@@ -112,40 +112,30 @@ test.describe('AuthCodeInput', () => {
                 const container = $.prev(auth).shift();
                 $.addClass(auth, 'runtime');
                 authCodeInput.dispose();
-                return {
-                    className: $.getAttribute(auth, 'class'),
-                    containerConnected: $.isConnected(container),
-                    hasData: $.hasData(auth, 'authcodeinput'),
-                    node: authCodeInput.node,
-                    options: authCodeInput.options,
-                    tabIndex: $.getAttribute(auth, 'tabindex'),
-                };
-            })).toEqual({
-                className: 'existing runtime',
-                containerConnected: false,
-                hasData: false,
-                node: null,
-                options: null,
-                tabIndex: '4',
-            });
+                return !$.isConnected(container) &&
+                    !$.hasData(auth, 'authcodeinput') &&
+                    authCodeInput.node === null &&
+                    authCodeInput.options === null;
+            })).toBe(true);
+
+            await expect(page.locator('#auth')).toHaveClass('existing runtime');
+            await expect(page.locator('#auth')).toHaveAttribute('tabindex', '4');
+            await expect(page.locator('.d-flex')).toHaveCount(0);
         });
 
         test('restores existing hidden and absent tabindex state', async ({ page }) => {
-            expect(await page.evaluate((_) => {
+            await page.evaluate((_) => {
                 $.setHTML(
                     document.body,
                     '<input class="visually-hidden existing" id="auth">',
                 );
                 const auth = $.findOne('#auth');
                 UI.AuthCodeInput.init(auth).dispose();
-                return {
-                    className: $.getAttribute(auth, 'class'),
-                    hasTabIndex: $.hasAttribute(auth, 'tabindex'),
-                };
-            })).toEqual({
-                className: 'visually-hidden existing',
-                hasTabIndex: false,
             });
+
+            const auth = page.locator('#auth');
+            await expect(auth).toHaveClass('visually-hidden existing');
+            await expect(auth).not.toHaveAttribute('tabindex');
         });
 
         test('removes the AuthCodeInput (query)', async ({ page }) => {
@@ -162,99 +152,87 @@ test.describe('AuthCodeInput', () => {
                 const authCodeInput = UI.AuthCodeInput.init(auth);
                 const container = $.prev(auth).shift();
                 $.remove(auth);
-                return {
-                    containerConnected: $.isConnected(container),
-                    node: authCodeInput.node,
-                    options: authCodeInput.options,
-                    originalConnected: $.isConnected(auth),
-                };
-            })).toEqual({
-                containerConnected: false,
-                node: null,
-                options: null,
-                originalConnected: false,
-            });
+                return !$.isConnected(container) &&
+                    authCodeInput.node === null &&
+                    authCodeInput.options === null &&
+                    !$.isConnected(auth);
+            })).toBe(true);
+
+            await expect(page.locator('#auth')).toHaveCount(0);
+            await expect(page.locator('.d-flex')).toHaveCount(0);
         });
     });
 
     test.describe('#clear', () => {
         test('clears the value', async ({ page }) => {
-            expect(await page.evaluate((_) => {
+            await page.evaluate((_) => {
                 const authCodeInput = UI.AuthCodeInput.init($.findOne('#auth'));
                 authCodeInput.setValue('123');
                 authCodeInput.clear();
-                return {
-                    value: authCodeInput.getValue(),
-                    visible: $.find('input', $.prev('#auth').shift())
-                        .map((input) => $.getValue(input)),
-                };
-            })).toEqual({
-                value: '',
-                visible: ['', '', '', '', '', ''],
             });
+
+            await expect(page.locator('#auth')).toHaveValue('');
+            const inputs = page.locator('.d-flex input');
+            await expect(inputs).toHaveCount(6);
+            for (let index = 0; index < 6; index++) {
+                await expect(inputs.nth(index)).toHaveValue('');
+            }
         });
 
         test('clears the value (query)', async ({ page }) => {
-            expect(await page.evaluate((_) => {
+            await page.evaluate((_) => {
                 $('#auth').authcodeinput();
                 $('#auth').authcodeinput('setValue', '123');
                 $('#auth').authcodeinput('clear');
-                return $.getValue('#auth');
-            })).toBe('');
+            });
+
+            await expect(page.locator('#auth')).toHaveValue('');
         });
     });
 
     test.describe('#disable', () => {
         test('disables the AuthCodeInput', async ({ page }) => {
-            expect(await page.evaluate((_) => {
+            await page.evaluate((_) => {
                 const authCodeInput = UI.AuthCodeInput.init($.findOne('#auth'));
                 authCodeInput.disable();
-                return {
-                    inputs: $.find('input', $.prev('#auth').shift())
-                        .map((input) => input.disabled),
-                    original: $.is('#auth', ':disabled'),
-                };
-            })).toEqual({
-                inputs: [true, true, true, true, true, true],
-                original: true,
             });
+
+            await expect(page.locator('#auth')).toBeDisabled();
+            await expect(page.locator('.d-flex input:disabled')).toHaveCount(6);
         });
 
         test('disables the AuthCodeInput (query)', async ({ page }) => {
-            expect(await page.evaluate((_) => {
+            await page.evaluate((_) => {
                 $('#auth').authcodeinput();
                 $('#auth').authcodeinput('disable');
-                return $.find('input', $.prev('#auth').shift())
-                    .every((input) => input.disabled);
-            })).toBe(true);
+            });
+
+            await expect(page.locator('#auth')).toBeDisabled();
+            await expect(page.locator('.d-flex input:disabled')).toHaveCount(6);
         });
     });
 
     test.describe('#enable', () => {
         test('enables the AuthCodeInput', async ({ page }) => {
-            expect(await page.evaluate((_) => {
+            await page.evaluate((_) => {
                 $.setHTML(document.body, '<input id="auth" disabled>');
                 const authCodeInput = UI.AuthCodeInput.init($.findOne('#auth'));
                 authCodeInput.enable();
-                return {
-                    inputs: $.find('input', $.prev('#auth').shift())
-                        .map((input) => input.disabled),
-                    original: $.is('#auth', ':disabled'),
-                };
-            })).toEqual({
-                inputs: [false, false, false, false, false, false],
-                original: false,
             });
+
+            await expect(page.locator('#auth')).toBeEnabled();
+            await expect(page.locator('.d-flex input:enabled')).toHaveCount(6);
         });
 
         test('enables the AuthCodeInput (query)', async ({ page }) => {
-            expect(await page.evaluate((_) => {
+            await page.evaluate((_) => {
                 $.setHTML(document.body, '<input id="auth" disabled>');
                 $('#auth').authcodeinput();
                 $('#auth').authcodeinput('enable');
-                return $.find('input', $.prev('#auth').shift())
-                    .every((input) => !input.disabled);
-            })).toBe(true);
+            });
+
+            await expect(page.locator('#auth')).toBeEnabled();
+            await expect(page.locator('.d-flex input:enabled')).toHaveCount(6);
         });
     });
 
@@ -278,45 +256,48 @@ test.describe('AuthCodeInput', () => {
 
     test.describe('#setValue', () => {
         test('sets the value', async ({ page }) => {
-            expect(await page.evaluate((_) => {
+            await page.evaluate((_) => {
                 const authCodeInput = UI.AuthCodeInput.init($.findOne('#auth'));
                 authCodeInput.setValue('1234');
-                return {
-                    original: $.getValue('#auth'),
-                    visible: $.find('input', $.prev('#auth').shift())
-                        .map((input) => $.getValue(input)),
-                };
-            })).toEqual({
-                original: '1234',
-                visible: ['1', '2', '3', '4', '', ''],
             });
+
+            await expect(page.locator('#auth')).toHaveValue('1234');
+            const inputs = page.locator('.d-flex input');
+            const values = ['1', '2', '3', '4', '', ''];
+            await expect(inputs).toHaveCount(values.length);
+            for (const [index, value] of values.entries()) {
+                await expect(inputs.nth(index)).toHaveValue(value);
+            }
         });
 
         test('sets the value (query)', async ({ page }) => {
-            expect(await page.evaluate((_) => {
+            await page.evaluate((_) => {
                 $('#auth').authcodeinput();
                 $('#auth').authcodeinput('setValue', '1234');
-                return $.getValue('#auth');
-            })).toBe('1234');
+            });
+
+            await expect(page.locator('#auth')).toHaveValue('1234');
         });
 
         test('filters the value', async ({ page }) => {
-            expect(await page.evaluate((_) => {
+            await page.evaluate((_) => {
                 const authCodeInput = UI.AuthCodeInput.init($.findOne('#auth'));
                 authCodeInput.setValue('a1b2c3');
-                return authCodeInput.getValue();
-            })).toBe('123');
+            });
+
+            await expect(page.locator('#auth')).toHaveValue('123');
         });
 
         test('truncates the value to the rendered length', async ({ page }) => {
-            expect(await page.evaluate((_) => {
+            await page.evaluate((_) => {
                 const authCodeInput = UI.AuthCodeInput.init(
                     $.findOne('#auth'),
                     { length: 3 },
                 );
                 authCodeInput.setValue('123456');
-                return authCodeInput.getValue();
-            })).toBe('123');
+            });
+
+            await expect(page.locator('#auth')).toHaveValue('123');
         });
     });
 
@@ -329,8 +310,7 @@ test.describe('AuthCodeInput', () => {
             const inputs = page.locator('.d-flex input');
             await expect(inputs.first()).toHaveAttribute('autocomplete', 'one-time-code');
             await expect(inputs.nth(1)).toHaveAttribute('autocomplete', 'off');
-            expect(await inputs.evaluateAll((inputs) =>
-                inputs.every((input) => input.maxLength === 1))).toBe(true);
+            await expect(page.locator('.d-flex input[maxlength="1"]')).toHaveCount(6);
         });
 
         test('inherits required and ARIA attributes', async ({ page }) => {
@@ -356,22 +336,18 @@ test.describe('AuthCodeInput', () => {
             });
 
             const containers = page.locator('.d-flex');
-            expect(await containers.first().locator('input').evaluateAll((inputs) =>
-                inputs.map((input) => ({
-                    ariaRequired: input.getAttribute('aria-required'),
-                    describedBy: input.getAttribute('aria-describedby'),
-                    errorMessage: input.getAttribute('aria-errormessage'),
-                    invalid: input.getAttribute('aria-invalid'),
-                    required: input.required,
-                })))).toEqual(Array.from({ length: 6 }, (_) => ({
-                ariaRequired: 'true',
-                describedBy: 'description',
-                errorMessage: 'error',
-                invalid: 'true',
-                required: true,
-            })));
-            expect(await containers.nth(1).locator('input').evaluateAll((inputs) =>
-                inputs.every((input) => !input.required))).toBe(true);
+            const inputs = containers.first().locator('input');
+            await expect(inputs).toHaveCount(6);
+            for (let index = 0; index < 6; index++) {
+                const input = inputs.nth(index);
+                await expect(input).toHaveAttribute('aria-required', 'true');
+                await expect(input).toHaveAttribute('aria-describedby', 'description');
+                await expect(input).toHaveAttribute('aria-errormessage', 'error');
+                await expect(input).toHaveAttribute('aria-invalid', 'true');
+                await expect(input).toHaveAttribute('required', '');
+            }
+            await expect(containers.nth(1).locator('input')).toHaveCount(6);
+            await expect(containers.nth(1).locator('input[required]')).toHaveCount(0);
         });
     });
 
@@ -464,7 +440,7 @@ test.describe('AuthCodeInput', () => {
         });
 
         test('distributes pasted input', async ({ page }) => {
-            expect(await page.evaluate((_) => {
+            const allowed = await page.evaluate((_) => {
                 const auth = $.findOne('#auth');
                 const inputs = $.find('input', $.prev(auth).shift());
                 const event = new ClipboardEvent('paste', {
@@ -475,22 +451,22 @@ test.describe('AuthCodeInput', () => {
                     value: { getData: (_) => '12-3 456' },
                 });
 
-                return {
-                    allowed: inputs[0].dispatchEvent(event),
-                    focused: inputs.indexOf(document.activeElement),
-                    original: $.getValue(auth),
-                    values: inputs.map((input) => $.getValue(input)),
-                };
-            })).toEqual({
-                allowed: false,
-                focused: 5,
-                original: '123456',
-                values: ['1', '2', '3', '4', '5', '6'],
+                return inputs[0].dispatchEvent(event);
             });
+
+            expect(allowed).toBe(false);
+            await expect(page.locator('#auth')).toHaveValue('123456');
+            const inputs = page.locator('.d-flex input');
+            const values = ['1', '2', '3', '4', '5', '6'];
+            await expect(inputs).toHaveCount(values.length);
+            for (const [index, value] of values.entries()) {
+                await expect(inputs.nth(index)).toHaveValue(value);
+            }
+            await expect(inputs.last()).toBeFocused();
         });
 
         test('distributes pasted input from the active input', async ({ page }) => {
-            expect(await page.evaluate((_) => {
+            await page.evaluate((_) => {
                 const authCodeInput = $.getData('#auth', 'authcodeinput');
                 authCodeInput.setValue('12');
                 const inputs = $.find('input', $.prev('#auth').shift());
@@ -502,12 +478,13 @@ test.describe('AuthCodeInput', () => {
                     value: { getData: (_) => '34-56' },
                 });
                 inputs[2].dispatchEvent(event);
-                return authCodeInput.getValue();
-            })).toBe('123456');
+            });
+
+            await expect(page.locator('#auth')).toHaveValue('123456');
         });
 
         test('ignores pasted input without valid characters', async ({ page }) => {
-            expect(await page.evaluate((_) => {
+            await page.evaluate((_) => {
                 const authCodeInput = $.getData('#auth', 'authcodeinput');
                 authCodeInput.setValue('12');
                 const input = $.findOne('input', $.prev('#auth').shift());
@@ -519,41 +496,38 @@ test.describe('AuthCodeInput', () => {
                     value: { getData: (_) => 'abc' },
                 });
                 input.dispatchEvent(event);
-                return authCodeInput.getValue();
-            })).toBe('12');
+            });
+
+            await expect(page.locator('#auth')).toHaveValue('12');
         });
 
         test('distributes multi-character autofill input', async ({ page }) => {
-            expect(await page.evaluate((_) => {
+            await page.evaluate((_) => {
                 const auth = $.findOne('#auth');
                 const inputs = $.find('input', $.prev(auth).shift());
                 $.setValue(inputs[0], '65a4-321');
                 $.triggerEvent(inputs[0], 'input');
-                return {
-                    focused: inputs.indexOf(document.activeElement),
-                    original: $.getValue(auth),
-                    values: inputs.map((input) => $.getValue(input)),
-                };
-            })).toEqual({
-                focused: 5,
-                original: '654321',
-                values: ['6', '5', '4', '3', '2', '1'],
             });
+
+            await expect(page.locator('#auth')).toHaveValue('654321');
+            const inputs = page.locator('.d-flex input');
+            const values = ['6', '5', '4', '3', '2', '1'];
+            await expect(inputs).toHaveCount(values.length);
+            for (const [index, value] of values.entries()) {
+                await expect(inputs.nth(index)).toHaveValue(value);
+            }
+            await expect(inputs.last()).toBeFocused();
         });
 
         test('clears multi-character input without valid characters', async ({ page }) => {
-            expect(await page.evaluate((_) => {
+            await page.evaluate((_) => {
                 const input = $.findOne('input', $.prev('#auth').shift());
                 $.setValue(input, 'abc');
                 $.triggerEvent(input, 'input');
-                return {
-                    original: $.getValue('#auth'),
-                    visible: $.getValue(input),
-                };
-            })).toEqual({
-                original: '',
-                visible: '',
             });
+
+            await expect(page.locator('#auth')).toHaveValue('');
+            await expect(page.locator('.d-flex input').first()).toHaveValue('');
         });
 
         test('handles backspace from filled and empty inputs', async ({ page }) => {
@@ -667,55 +641,34 @@ test.describe('AuthCodeInput', () => {
 
         test('updates the tab order', async ({ page }) => {
             const inputs = page.locator('.d-flex input');
-            expect(await inputs.evaluateAll((inputs) =>
-                inputs.map((input) => input.getAttribute('tabindex')))).toEqual([
-                null,
-                '-1',
-                '-1',
-                '-1',
-                '-1',
-                '-1',
-            ]);
+            await expect(inputs).toHaveCount(6);
+            await expect(inputs.first()).not.toHaveAttribute('tabindex');
+            await expect(page.locator('.d-flex input[tabindex="-1"]')).toHaveCount(5);
 
             await page.evaluate((_) => {
                 $.getData('#auth', 'authcodeinput').setValue('12');
             });
-            expect(await inputs.evaluateAll((inputs) =>
-                inputs.map((input) => input.getAttribute('tabindex')))).toEqual([
-                null,
-                null,
-                null,
-                '-1',
-                '-1',
-                '-1',
-            ]);
+            await expect(inputs.nth(2)).not.toHaveAttribute('tabindex');
+            await expect(page.locator('.d-flex input[tabindex="-1"]')).toHaveCount(3);
 
             await page.evaluate((_) => {
                 $.getData('#auth', 'authcodeinput').setValue('123456');
             });
-            expect(await inputs.evaluateAll((inputs) =>
-                inputs.map((input) => input.getAttribute('tabindex')))).toEqual([
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-            ]);
+            await expect(page.locator('.d-flex input[tabindex]')).toHaveCount(0);
         });
     });
 
     test.describe('autoSubmit option', () => {
         test('submits the form when the code is complete', async ({ page }) => {
-            expect(await page.evaluate((_) => {
+            await page.evaluate((_) => {
                 $.setHTML(
                     document.body,
                     '<form id="form"><input id="auth"><button type="submit">Submit</button></form>',
                 );
-                let submits = 0;
+                window.authCodeInputSubmits = 0;
                 $.addEvent('#form', 'submit', (event) => {
                     event.preventDefault();
-                    submits++;
+                    window.authCodeInputSubmits++;
                 });
                 UI.AuthCodeInput.init(
                     $.findOne('#auth'),
@@ -726,17 +679,17 @@ test.describe('AuthCodeInput', () => {
                     $.setValue(inputs[index], value);
                     $.triggerEvent(inputs[index], 'input');
                 }
-                const incomplete = submits;
+            });
+
+            expect(await page.evaluate((_) => window.authCodeInputSubmits)).toBe(0);
+
+            await page.evaluate((_) => {
+                const inputs = $.find('input', $.prev('#auth').shift());
                 $.setValue(inputs[2], '3');
                 $.triggerEvent(inputs[2], 'input');
-                return {
-                    incomplete,
-                    submits,
-                };
-            })).toEqual({
-                incomplete: 0,
-                submits: 1,
             });
+
+            expect(await page.evaluate((_) => window.authCodeInputSubmits)).toBe(1);
         });
 
         test('works with autoSubmit option (data-ui-auto-submit)', async ({ page }) => {
@@ -765,14 +718,15 @@ test.describe('AuthCodeInput', () => {
         });
 
         test('does not require a form', async ({ page }) => {
-            expect(await page.evaluate((_) => {
+            await page.evaluate((_) => {
                 const authCodeInput = UI.AuthCodeInput.init(
                     $.findOne('#auth'),
                     { autoSubmit: true, length: 2 },
                 );
                 authCodeInput.setValue('12');
-                return authCodeInput.getValue();
-            })).toBe('12');
+            });
+
+            await expect(page.locator('#auth')).toHaveValue('12');
         });
     });
 
@@ -782,15 +736,19 @@ test.describe('AuthCodeInput', () => {
                 UI.AuthCodeInput.init($.findOne('#auth'));
             });
 
-            expect(await page.locator('.d-flex input').evaluateAll((inputs) =>
-                inputs.map((input) => input.getAttribute('aria-label')))).toEqual([
+            const inputs = page.locator('.d-flex input');
+            const labels = [
                 'Character 1',
                 'Character 2',
                 'Character 3',
                 'Character 4',
                 'Character 5',
                 'Character 6',
-            ]);
+            ];
+            await expect(inputs).toHaveCount(labels.length);
+            for (const [index, label] of labels.entries()) {
+                await expect(inputs.nth(index)).toHaveAttribute('aria-label', label);
+            }
         });
 
         test('works with getAriaLabel option', async ({ page }) => {
@@ -801,12 +759,12 @@ test.describe('AuthCodeInput', () => {
                 });
             });
 
-            expect(await page.locator('.d-flex input').evaluateAll((inputs) =>
-                inputs.map((input) => input.getAttribute('aria-label')))).toEqual([
-                'Digit 1',
-                'Digit 2',
-                'Digit 3',
-            ]);
+            const inputs = page.locator('.d-flex input');
+            const labels = ['Digit 1', 'Digit 2', 'Digit 3'];
+            await expect(inputs).toHaveCount(labels.length);
+            for (const [index, label] of labels.entries()) {
+                await expect(inputs.nth(index)).toHaveAttribute('aria-label', label);
+            }
         });
     });
 
@@ -824,22 +782,17 @@ test.describe('AuthCodeInput', () => {
         });
 
         test('works with length option', async ({ page }) => {
-            expect(await page.evaluate((_) => {
+            await page.evaluate((_) => {
                 UI.AuthCodeInput.init($.findOne('#auth'), { length: [2, 4] });
-                const container = $.prev('#auth').shift();
-                return [...container.children].map((node) => ({
-                    className: $.getAttribute(node, 'class'),
-                    tagName: node.tagName,
-                }));
-            })).toEqual([
-                { className: 'form-input w-auto', tagName: 'DIV' },
-                { className: 'form-input w-auto', tagName: 'DIV' },
-                { className: 'vr align-self-center fs-5', tagName: 'SPAN' },
-                { className: 'form-input w-auto', tagName: 'DIV' },
-                { className: 'form-input w-auto', tagName: 'DIV' },
-                { className: 'form-input w-auto', tagName: 'DIV' },
-                { className: 'form-input w-auto', tagName: 'DIV' },
-            ]);
+            });
+
+            const container = page.locator('.d-flex');
+            await expect(container.locator(':scope > *')).toHaveCount(7);
+            await expect(container.locator(':scope > div.form-input.w-auto')).toHaveCount(6);
+            await expect(container.locator(':scope > span.vr.align-self-center.fs-5'))
+                .toHaveCount(1);
+            await expect(container.locator(':scope > :nth-child(3)'))
+                .toHaveClass('vr align-self-center fs-5');
         });
 
         test('works with length option (data-ui-length)', async ({ page }) => {
@@ -879,45 +832,35 @@ test.describe('AuthCodeInput', () => {
                 UI.AuthCodeInput.init($.findOne('#auth'));
             });
 
-            expect(await page.locator('.d-flex input').evaluateAll((inputs) =>
-                inputs.every((input) =>
-                    input.inputMode === 'numeric' && input.pattern === '[0-9]',
-                ))).toBe(true);
+            await expect(page.locator(
+                '.d-flex input[inputmode="numeric"][pattern="[0-9]"]',
+            )).toHaveCount(6);
         });
 
         test('works with regExp option', async ({ page }) => {
-            expect(await page.evaluate((_) => {
+            await page.evaluate((_) => {
                 const authCodeInput = UI.AuthCodeInput.init(
                     $.findOne('#auth'),
                     { regExp: '[A-Z]' },
                 );
                 authCodeInput.setValue('A1B2');
-                const inputs = $.find('input', $.prev('#auth').shift());
-                return {
-                    inputMode: inputs[0].inputMode,
-                    pattern: inputs[0].pattern,
-                    value: authCodeInput.getValue(),
-                };
-            })).toEqual({
-                inputMode: 'text',
-                pattern: '[A-Z]',
-                value: 'AB',
             });
+
+            await expect(page.locator('#auth')).toHaveValue('AB');
+            await expect(page.locator(
+                '.d-flex input[inputmode="text"][pattern="[A-Z]"]',
+            )).toHaveCount(6);
         });
 
         test('works with regExp option (data-ui-reg-exp)', async ({ page }) => {
-            expect(await page.evaluate((_) => {
+            await page.evaluate((_) => {
                 $.setDataset('#auth', { uiRegExp: '[A-Z]' });
                 const authCodeInput = UI.AuthCodeInput.init($.findOne('#auth'));
                 authCodeInput.setValue('A1B2');
-                return {
-                    option: authCodeInput.options.regExp,
-                    value: authCodeInput.getValue(),
-                };
-            })).toEqual({
-                option: '[A-Z]',
-                value: 'AB',
             });
+
+            await expect(page.locator('#auth')).toHaveValue('AB');
+            await expect(page.locator('.d-flex input[pattern="[A-Z]"]')).toHaveCount(6);
         });
 
         test('preserves the original inputmode', async ({ page }) => {
@@ -926,8 +869,7 @@ test.describe('AuthCodeInput', () => {
                 UI.AuthCodeInput.init($.findOne('#auth'));
             });
 
-            expect(await page.locator('.d-flex input').evaluateAll((inputs) =>
-                inputs.every((input) => input.inputMode === 'email'))).toBe(true);
+            await expect(page.locator('.d-flex input[inputmode="email"]')).toHaveCount(6);
         });
     });
 
@@ -962,7 +904,7 @@ test.describe('AuthCodeInput', () => {
         });
 
         test('renders light and dark theme variants', async ({ page }) => {
-            expect(await page.evaluate((_) => {
+            await page.evaluate((_) => {
                 $.setHTML(
                     document.body,
                     `
@@ -982,42 +924,23 @@ test.describe('AuthCodeInput', () => {
                 for (const id of ['light-filled', 'dark-filled']) {
                     UI.AuthCodeInput.init($.findOne(`#${id}`), { style: 'filled' });
                 }
-
-                const style = (id) => {
-                    const input = $.findOne('input', $.prev(`#${id}`).shift());
-                    const computed = getComputedStyle(input);
-                    return `${computed.color}|${computed.backgroundColor}|${computed.borderColor}`;
-                };
-
-                return {
-                    darkFilled: style('dark-filled'),
-                    darkOutline: style('dark-outline'),
-                    lightFilled: style('light-filled'),
-                    lightOutline: style('light-outline'),
-                };
-            })).toEqual(expect.objectContaining({
-                darkFilled: expect.any(String),
-                darkOutline: expect.any(String),
-                lightFilled: expect.any(String),
-                lightOutline: expect.any(String),
-            }));
-
-            const themes = await page.evaluate((_) => {
-                const style = (id) => {
-                    const input = $.findOne('input', $.prev(`#${id}`).shift());
-                    const computed = getComputedStyle(input);
-                    return `${computed.color}|${computed.backgroundColor}|${computed.borderColor}`;
-                };
-                return {
-                    darkFilled: style('dark-filled'),
-                    darkOutline: style('dark-outline'),
-                    lightFilled: style('light-filled'),
-                    lightOutline: style('light-outline'),
-                };
             });
 
-            expect(themes.lightOutline).not.toBe(themes.darkOutline);
-            expect(themes.lightFilled).not.toBe(themes.darkFilled);
+            const style = (locator) => locator.evaluate((input) => {
+                const computed = getComputedStyle(input);
+                return [
+                    computed.color,
+                    computed.backgroundColor,
+                    computed.borderColor,
+                ];
+            });
+            const light = page.locator('[data-ui-theme="light"] .d-flex');
+            const dark = page.locator('[data-ui-theme="dark"] .d-flex');
+
+            expect(await style(light.first().locator('input').first()))
+                .not.toEqual(await style(dark.first().locator('input').first()));
+            expect(await style(light.nth(1).locator('input').first()))
+                .not.toEqual(await style(dark.nth(1).locator('input').first()));
         });
     });
 });

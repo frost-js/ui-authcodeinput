@@ -275,7 +275,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 						"autocomplete": inputIndex ? "off" : "one-time-code",
 						"aria-label": this.options.getAriaLabel(++inputIndex)
 					};
-					if (required) attributes.required = true;
+					if (required) attributes.required = "";
 					const formInput = _fr0st_query.default.create("div", { class: this.constructor.classes.inputContainer });
 					const input = _fr0st_query.default.create("input", {
 						class: [`input-${this.options.style}`, this.constructor.classes.input],
