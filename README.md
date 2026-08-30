@@ -49,6 +49,8 @@ const authCodeInput = AuthCodeInput.init(
 
 `@fr0st/ui` and `@fr0st/query` are peer dependencies so the component shares the application's UI and fQuery instances. The package root, `dist/*`, and `src/*` are available through package exports.
 
+AuthCodeInput requires a browser DOM or a compatible DOM environment configured through fQuery. Server-rendered applications should load the component on the client.
+
 ### Browser (ESM)
 
 The ESM bundle imports `@fr0st/ui` and `@fr0st/query`. Frost UI and fQuery also require `@fr0st/core`, so map all three dependencies when loading the bundle directly in a browser:
@@ -173,13 +175,20 @@ Options other than `getAriaLabel` can be supplied through `data-ui-*` attributes
 <input
     id="verification-code"
     name="verificationCode"
+    data-ui-toggle="authcodeinput"
     data-ui-auto-submit="true"
     data-ui-length="[3, 3]"
     data-ui-reg-exp="[0-9]"
     data-ui-style="filled">
 ```
 
-The component still needs to be initialized through the class or fQuery plugin.
+The component still needs to be initialized through the class or fQuery plugin. The demo uses `data-ui-toggle="authcodeinput"` as a shared initialization selector:
+
+```js
+$('[data-ui-toggle="authcodeinput"]').authcodeinput();
+```
+
+The `data-ui-toggle` attribute does not initialize AuthCodeInput by itself.
 
 ## Methods
 
@@ -299,31 +308,13 @@ In RTL layouts, the visual order reverses and Arrow Left/Arrow Right continue to
 
 ## Development
 
-Install the locked dependencies:
-
 ```bash
-npm ci
+npm test
+npm run lint
+npm run build
 ```
 
-Available commands:
-
-```bash
-npm run lint          # Lint source, configuration, and tests
-npm run build         # Build ESM and UMD bundles with source maps
-npm run test:browser  # Run Chromium, Firefox, and WebKit
-npm run test:coverage # Run Chromium with source-mapped coverage
-npm run test:headed   # Run the browser suite in headed mode
-npm run test:ui       # Open the Playwright UI
-npm test              # Build and run the complete browser suite
-```
-
-Coverage is written to `coverage/`, including `coverage/lcov.info` for Codecov. The CI matrix tests Chromium on Node.js 20, 22, and 24, with Firefox and WebKit on Node.js 24.
-
-## Browser support
-
-Compiled code targets the Browserslist `baseline newly available` browser set. The browser suite runs against current Playwright releases of Chromium, Firefox, and WebKit.
-
-Development and builds require Node.js `^20.19.0`, `^22.13.0`, or `>=24`.
+`npm test` builds the bundles and runs the Playwright suite in Chromium, Firefox, and WebKit.
 
 ## License
 
