@@ -1,5 +1,6 @@
 import $ from '@fr0st/query';
 import { BaseComponent } from '@fr0st/ui';
+import { getValidCharacters } from './helpers.js';
 
 /**
  * @typedef {object} AuthCodeInputOptions
@@ -15,6 +16,22 @@ import { BaseComponent } from '@fr0st/ui';
  * @augments {BaseComponent<AuthCodeInputOptions>}
  */
 export default class AuthCodeInput extends BaseComponent {
+    static classes = {
+        container: 'd-flex justify-content-between',
+        divider: 'vr align-self-center fs-5',
+        hide: 'visually-hidden',
+        input: 'fw-bold text-center px-0',
+        inputContainer: 'form-input w-auto',
+    };
+    /** @type {AuthCodeInputOptions} */
+    static defaults = {
+        style: 'outline',
+        length: [3, 3],
+        regExp: '[0-9]',
+        autoSubmit: false,
+        getAriaLabel: (i) => `Character ${i}`,
+    };
+
     #container;
     #hidden;
     #inputs;
@@ -126,7 +143,7 @@ export default class AuthCodeInput extends BaseComponent {
      * @returns {boolean} Whether any valid characters were distributed.
      */
     #distributeValue(value, startIndex) {
-        const chars = this.#getValidCharacters(value)
+        const chars = getValidCharacters(value, this.#regExp)
             .slice(0, this.#inputs.length - startIndex);
 
         if (!chars.length) {
@@ -183,7 +200,7 @@ export default class AuthCodeInput extends BaseComponent {
                 return;
             }
 
-            if (value && !this.#getValidCharacters(value).length) {
+            if (value && !getValidCharacters(value, this.#regExp).length) {
                 value = '';
                 $.setValue(target, value);
             }
@@ -200,11 +217,10 @@ export default class AuthCodeInput extends BaseComponent {
         });
 
         $.addEventDelegate(this.#container, 'paste.ui.authcodeinput', 'input', (e) => {
-            const value = e.clipboardData.getData('text');
-
             e.preventDefault();
+
             this.#distributeValue(
-                value,
+                e.clipboardData.getData('text'),
                 this.#inputs.indexOf(e.currentTarget),
             );
         });
@@ -256,16 +272,6 @@ export default class AuthCodeInput extends BaseComponent {
 
             e.preventDefault();
         });
-    }
-
-    /**
-     * Gets the valid characters from a value.
-     * @param {string} value The value to filter.
-     * @returns {string[]} The valid characters.
-     */
-    #getValidCharacters(value) {
-        return Array.from(value)
-            .filter((char) => char.match(this.#regExp));
     }
 
     /**

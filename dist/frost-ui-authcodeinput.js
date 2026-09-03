@@ -33,6 +33,18 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 //#endregion
 _fr0st_query = __toESM(_fr0st_query, 1);
 
+//#region src/helpers.js
+/**
+	* Gets the valid characters from a value.
+	* @param {string} value The value to filter.
+	* @param {RegExp} regExp The regular expression used to validate each character.
+	* @returns {string[]} The valid characters.
+	*/
+	function getValidCharacters(value, regExp) {
+		return Array.from(value).filter((char) => char.match(regExp));
+	}
+
+//#endregion
 //#region src/auth-code-input.js
 /**
 	* @typedef {object} AuthCodeInputOptions
@@ -47,6 +59,21 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 	* @augments {BaseComponent<AuthCodeInputOptions>}
 	*/
 	var AuthCodeInput = class extends _fr0st_ui.BaseComponent {
+		static classes = {
+			container: "d-flex justify-content-between",
+			divider: "vr align-self-center fs-5",
+			hide: "visually-hidden",
+			input: "fw-bold text-center px-0",
+			inputContainer: "form-input w-auto"
+		};
+		/** @type {AuthCodeInputOptions} */
+		static defaults = {
+			style: "outline",
+			length: [3, 3],
+			regExp: "[0-9]",
+			autoSubmit: false,
+			getAriaLabel: (i) => `Character ${i}`
+		};
 		#container;
 		#hidden;
 		#inputs;
@@ -131,7 +158,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		* @returns {boolean} Whether any valid characters were distributed.
 		*/
 		#distributeValue(value, startIndex) {
-			const chars = this.#getValidCharacters(value).slice(0, this.#inputs.length - startIndex);
+			const chars = getValidCharacters(value, this.#regExp).slice(0, this.#inputs.length - startIndex);
 			if (!chars.length) return false;
 			for (const [offset, char] of chars.entries()) _fr0st_query.default.setValue(this.#inputs[startIndex + offset], char);
 			this.#updateValue();
@@ -165,7 +192,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 					}
 					return;
 				}
-				if (value && !this.#getValidCharacters(value).length) {
+				if (value && !getValidCharacters(value, this.#regExp).length) {
 					value = "";
 					_fr0st_query.default.setValue(target, value);
 				}
@@ -174,9 +201,8 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				if (targetIndex < this.#inputs.length - 1) _fr0st_query.default.focus(this.#inputs[targetIndex + 1]);
 			});
 			_fr0st_query.default.addEventDelegate(this.#container, "paste.ui.authcodeinput", "input", (e) => {
-				const value = e.clipboardData.getData("text");
 				e.preventDefault();
-				this.#distributeValue(value, this.#inputs.indexOf(e.currentTarget));
+				this.#distributeValue(e.clipboardData.getData("text"), this.#inputs.indexOf(e.currentTarget));
 			});
 			_fr0st_query.default.addEventDelegate(this.#container, "keydown.ui.authcodeinput", "input", (e) => {
 				const target = e.currentTarget;
@@ -209,14 +235,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				}
 				e.preventDefault();
 			});
-		}
-		/**
-		* Gets the valid characters from a value.
-		* @param {string} value The value to filter.
-		* @returns {string[]} The valid characters.
-		*/
-		#getValidCharacters(value) {
-			return Array.from(value).filter((char) => char.match(this.#regExp));
 		}
 		/**
 		* Refreshes the rendered input values.
@@ -310,22 +328,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 
 //#endregion
 //#region src/index.js
-/** @import { AuthCodeInputOptions } from './auth-code-input.js'; */
-	/** @type {AuthCodeInputOptions} */
-	AuthCodeInput.defaults = {
-		style: "outline",
-		length: [3, 3],
-		regExp: "[0-9]",
-		autoSubmit: false,
-		getAriaLabel: (i) => `Character ${i}`
-	};
-	AuthCodeInput.classes = {
-		container: "d-flex justify-content-between",
-		divider: "vr align-self-center fs-5",
-		hide: "visually-hidden",
-		input: "fw-bold text-center px-0",
-		inputContainer: "form-input w-auto"
-	};
 	(0, _fr0st_ui.initComponent)("authcodeinput", AuthCodeInput);
 	var src_default = AuthCodeInput;
 

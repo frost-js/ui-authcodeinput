@@ -1,7 +1,7 @@
 /** @import { Page } from '@playwright/test'; */
 
 /**
- * Reset the browser page and AuthCodeInput defaults.
+ * Resets the browser page.
  * @param {Page} page The Playwright page.
  * @returns {Promise<void>} The promise.
  */
@@ -10,27 +10,19 @@ export async function resetPage(page) {
         waitUntil: 'domcontentloaded',
     });
 
-    const stateReset = await page.evaluate((_) => {
+    const initialized = await page.evaluate((_) => {
         if (!window.fQuery || !window.UI?.AuthCodeInput) {
             return false;
         }
 
         window.$ = window.fQuery;
 
-        UI.AuthCodeInput.defaults.style = 'outline';
-        UI.AuthCodeInput.defaults.length = [3, 3];
-        UI.AuthCodeInput.defaults.regExp = '[0-9]';
-        UI.AuthCodeInput.defaults.autoSubmit = false;
-        UI.AuthCodeInput.defaults.getAriaLabel = (index) => `Character ${index}`;
-
-        $.empty(document.body);
-
         return window.$ === window.fQuery &&
             typeof $.QuerySet.prototype.authcodeinput === 'function';
     });
 
-    if (!stateReset) {
-        throw new Error('Failed to restore AuthCodeInput on the test page.');
+    if (!initialized) {
+        throw new Error('Failed to initialize AuthCodeInput on the test page.');
     }
 
     await page.waitForFunction((_) => {

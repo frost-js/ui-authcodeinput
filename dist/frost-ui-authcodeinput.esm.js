@@ -1,6 +1,18 @@
 import { BaseComponent, initComponent } from "@fr0st/ui";
 import $ from "@fr0st/query";
 
+//#region src/helpers.js
+/**
+* Gets the valid characters from a value.
+* @param {string} value The value to filter.
+* @param {RegExp} regExp The regular expression used to validate each character.
+* @returns {string[]} The valid characters.
+*/
+function getValidCharacters(value, regExp) {
+	return Array.from(value).filter((char) => char.match(regExp));
+}
+
+//#endregion
 //#region src/auth-code-input.js
 /**
 * @typedef {object} AuthCodeInputOptions
@@ -15,6 +27,21 @@ import $ from "@fr0st/query";
 * @augments {BaseComponent<AuthCodeInputOptions>}
 */
 var AuthCodeInput = class extends BaseComponent {
+	static classes = {
+		container: "d-flex justify-content-between",
+		divider: "vr align-self-center fs-5",
+		hide: "visually-hidden",
+		input: "fw-bold text-center px-0",
+		inputContainer: "form-input w-auto"
+	};
+	/** @type {AuthCodeInputOptions} */
+	static defaults = {
+		style: "outline",
+		length: [3, 3],
+		regExp: "[0-9]",
+		autoSubmit: false,
+		getAriaLabel: (i) => `Character ${i}`
+	};
 	#container;
 	#hidden;
 	#inputs;
@@ -99,7 +126,7 @@ var AuthCodeInput = class extends BaseComponent {
 	* @returns {boolean} Whether any valid characters were distributed.
 	*/
 	#distributeValue(value, startIndex) {
-		const chars = this.#getValidCharacters(value).slice(0, this.#inputs.length - startIndex);
+		const chars = getValidCharacters(value, this.#regExp).slice(0, this.#inputs.length - startIndex);
 		if (!chars.length) return false;
 		for (const [offset, char] of chars.entries()) $.setValue(this.#inputs[startIndex + offset], char);
 		this.#updateValue();
@@ -133,7 +160,7 @@ var AuthCodeInput = class extends BaseComponent {
 				}
 				return;
 			}
-			if (value && !this.#getValidCharacters(value).length) {
+			if (value && !getValidCharacters(value, this.#regExp).length) {
 				value = "";
 				$.setValue(target, value);
 			}
@@ -142,9 +169,8 @@ var AuthCodeInput = class extends BaseComponent {
 			if (targetIndex < this.#inputs.length - 1) $.focus(this.#inputs[targetIndex + 1]);
 		});
 		$.addEventDelegate(this.#container, "paste.ui.authcodeinput", "input", (e) => {
-			const value = e.clipboardData.getData("text");
 			e.preventDefault();
-			this.#distributeValue(value, this.#inputs.indexOf(e.currentTarget));
+			this.#distributeValue(e.clipboardData.getData("text"), this.#inputs.indexOf(e.currentTarget));
 		});
 		$.addEventDelegate(this.#container, "keydown.ui.authcodeinput", "input", (e) => {
 			const target = e.currentTarget;
@@ -177,14 +203,6 @@ var AuthCodeInput = class extends BaseComponent {
 			}
 			e.preventDefault();
 		});
-	}
-	/**
-	* Gets the valid characters from a value.
-	* @param {string} value The value to filter.
-	* @returns {string[]} The valid characters.
-	*/
-	#getValidCharacters(value) {
-		return Array.from(value).filter((char) => char.match(this.#regExp));
 	}
 	/**
 	* Refreshes the rendered input values.
@@ -278,22 +296,6 @@ var AuthCodeInput = class extends BaseComponent {
 
 //#endregion
 //#region src/index.js
-/** @import { AuthCodeInputOptions } from './auth-code-input.js'; */
-/** @type {AuthCodeInputOptions} */
-AuthCodeInput.defaults = {
-	style: "outline",
-	length: [3, 3],
-	regExp: "[0-9]",
-	autoSubmit: false,
-	getAriaLabel: (i) => `Character ${i}`
-};
-AuthCodeInput.classes = {
-	container: "d-flex justify-content-between",
-	divider: "vr align-self-center fs-5",
-	hide: "visually-hidden",
-	input: "fw-bold text-center px-0",
-	inputContainer: "form-input w-auto"
-};
 initComponent("authcodeinput", AuthCodeInput);
 var src_default = AuthCodeInput;
 
