@@ -162,13 +162,15 @@ test.describe('AuthCodeInput', () => {
                 {
                     name: 'paste', initial: '', expected: '123',
                     action: (inputs) => inputs.first().evaluate((input) => {
-                        const clipboardData = new DataTransfer();
-                        clipboardData.setData('text', '123');
-                        input.dispatchEvent(new ClipboardEvent('paste', {
+                        const event = new ClipboardEvent('paste', {
                             bubbles: true,
                             cancelable: true,
-                            clipboardData,
-                        }));
+                        });
+                        // Firefox leaves DataTransfer-backed synthetic paste events empty.
+                        Object.defineProperty(event, 'clipboardData', {
+                            value: { getData: (_) => '123' },
+                        });
+                        input.dispatchEvent(event);
                     }),
                 },
             ]) {
@@ -329,13 +331,14 @@ test.describe('AuthCodeInput', () => {
             await inputs.nth(2).press('Backspace');
             await expect(page.locator('#auth')).toHaveValue('12');
             await inputs.first().evaluate((input) => {
-                const clipboardData = new DataTransfer();
-                clipboardData.setData('text', '654321');
-                input.dispatchEvent(new ClipboardEvent('paste', {
+                const event = new ClipboardEvent('paste', {
                     bubbles: true,
                     cancelable: true,
-                    clipboardData,
-                }));
+                });
+                Object.defineProperty(event, 'clipboardData', {
+                    value: { getData: (_) => '654321' },
+                });
+                input.dispatchEvent(event);
             });
 
             await expect(page.locator('#auth')).toHaveValue('12');
@@ -524,12 +527,12 @@ test.describe('AuthCodeInput', () => {
             const allowed = await page.evaluate((_) => {
                 const auth = document.querySelector('#auth');
                 const inputs = $.find('input', $.prev(auth).shift());
-                const clipboardData = new DataTransfer();
-                clipboardData.setData('text', '12-3 456');
                 const event = new ClipboardEvent('paste', {
                     bubbles: true,
                     cancelable: true,
-                    clipboardData,
+                });
+                Object.defineProperty(event, 'clipboardData', {
+                    value: { getData: (_) => '12-3 456' },
                 });
 
                 return inputs[0].dispatchEvent(event);
@@ -551,12 +554,12 @@ test.describe('AuthCodeInput', () => {
                 const authCodeInput = $.getData('#auth', 'authcodeinput');
                 authCodeInput.setValue('12');
                 const inputs = $.find('input', $.prev('#auth').shift());
-                const clipboardData = new DataTransfer();
-                clipboardData.setData('text', '34-56');
                 const event = new ClipboardEvent('paste', {
                     bubbles: true,
                     cancelable: true,
-                    clipboardData,
+                });
+                Object.defineProperty(event, 'clipboardData', {
+                    value: { getData: (_) => '34-56' },
                 });
                 inputs[2].dispatchEvent(event);
             });
@@ -569,12 +572,12 @@ test.describe('AuthCodeInput', () => {
                 const authCodeInput = $.getData('#auth', 'authcodeinput');
                 authCodeInput.setValue('12');
                 const input = $.findOne('input', $.prev('#auth').shift());
-                const clipboardData = new DataTransfer();
-                clipboardData.setData('text', 'abc');
                 const event = new ClipboardEvent('paste', {
                     bubbles: true,
                     cancelable: true,
-                    clipboardData,
+                });
+                Object.defineProperty(event, 'clipboardData', {
+                    value: { getData: (_) => 'abc' },
                 });
                 input.dispatchEvent(event);
             });
