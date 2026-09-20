@@ -1,32 +1,24 @@
 import { expect, test } from '#test';
-import { resetPage } from '../setup/browser.js';
-
-test.beforeEach(async ({ page }) => {
-    await resetPage(page);
-});
 
 test.describe('AuthCodeInput', () => {
     test.beforeEach(async ({ page }) => {
         await page.evaluate((_) => {
-            $.setHtml(
-                document.body,
-                '<input id="auth"><input id="auth2">',
-            );
+            document.body.innerHTML = '<input id="auth"><input id="auth2">';
         });
     });
 
     test.describe('#init', () => {
-        test('creates an AuthCodeInput', async ({ page }) => {
-            expect(await page.evaluate((_) => {
-                const auth = $.findOne('#auth');
-                return UI.AuthCodeInput.init(auth) instanceof UI.AuthCodeInput;
-            })).toBe(true);
-        });
-
-        test('creates an AuthCodeInput (query)', async ({ page }) => {
-            expect(await page.evaluate((_) =>
-                $('#auth').authcodeinput() instanceof UI.AuthCodeInput)).toBe(true);
-        });
+        for (const { name, init } of [
+            { name: 'class', init: () => UI.AuthCodeInput.init(document.querySelector('#auth')) },
+            { name: 'QuerySet', init: () => $('#auth').authcodeinput() },
+        ]) {
+            test(`creates an AuthCodeInput (${name})`, async ({ page }) => {
+                const instance = await page.evaluateHandle(init);
+                expect(await instance.evaluate((value) => value instanceof UI.AuthCodeInput)).toBe(true);
+                expect(await instance.evaluate((value) => $.getData('#auth', 'authcodeinput') === value)).toBe(true);
+                await expect(page.locator('.d-flex input')).toHaveCount(6);
+            });
+        }
 
         test('creates multiple AuthCodeInputs (query)', async ({ page }) => {
             expect(await page.evaluate((_) => {
@@ -46,7 +38,7 @@ test.describe('AuthCodeInput', () => {
 
         test('reuses an existing AuthCodeInput', async ({ page }) => {
             expect(await page.evaluate((_) => {
-                const auth = $.findOne('#auth');
+                const auth = document.querySelector('#auth');
                 const first = UI.AuthCodeInput.init(auth, { length: 4 });
                 const second = UI.AuthCodeInput.init(auth, { length: 2 });
                 return first === second;
@@ -56,7 +48,7 @@ test.describe('AuthCodeInput', () => {
 
         test('exposes frozen default options', async ({ page }) => {
             expect(await page.evaluate((_) => {
-                const authCodeInput = UI.AuthCodeInput.init($.findOne('#auth'));
+                const authCodeInput = UI.AuthCodeInput.init(document.querySelector('#auth'));
                 return {
                     autoSubmit: authCodeInput.options.autoSubmit,
                     frozen: Object.isFrozen(authCodeInput.options),
@@ -75,48 +67,44 @@ test.describe('AuthCodeInput', () => {
             });
         });
 
-        test('renders an initial value', async ({ page }) => {
-            await page.evaluate((_) => {
-                $.setHtml(document.body, '<input id="auth" value="1234">');
-                UI.AuthCodeInput.init($.findOne('#auth'));
+        for (const { name, value, expected } of [
+            { name: 'renders', value: '1234', expected: '1234' },
+            { name: 'filters', value: '1a2-3', expected: '123' },
+            { name: 'truncates', value: '1234567', expected: '123456' },
+        ]) {
+            test(`${name} an initial value`, async ({ page }) => {
+                await page.evaluate((value) => {
+                    const auth = document.querySelector('#auth');
+                    auth.value = value;
+                    UI.AuthCodeInput.init(auth);
+                }, value);
+
+                await expect(page.locator('#auth')).toHaveValue(expected);
+                const inputs = page.locator('.d-flex input');
+                await expect(inputs).toHaveCount(6);
+                for (let index = 0; index < 6; index++) {
+                    await expect(inputs.nth(index)).toHaveValue(expected[index] || '');
+                }
             });
-
-            const inputs = page.locator('.d-flex input');
-            const values = ['1', '2', '3', '4', '', ''];
-            await expect(inputs).toHaveCount(values.length);
-            for (const [index, value] of values.entries()) {
-                await expect(inputs.nth(index)).toHaveValue(value);
-            }
-            await expect(page.locator('#auth')).toHaveValue('1234');
-        });
-
-        test('filters an initial value', async ({ page }) => {
-            await page.evaluate((_) => {
-                $.setHtml(document.body, '<input id="auth" value="1a2-3">');
-                UI.AuthCodeInput.init($.findOne('#auth'));
-            });
-
-            await expect(page.locator('#auth')).toHaveValue('123');
-        });
+        }
     });
 
     test.describe('#dispose', () => {
         test('removes the AuthCodeInput and restores the original input', async ({ page }) => {
             expect(await page.evaluate((_) => {
-                $.setHtml(
-                    document.body,
-                    '<input class="existing" id="auth" tabindex="4">',
-                );
-                const auth = $.findOne('#auth');
+                document.body.innerHTML = '<input class="existing" id="auth" tabindex="4">';
+                const auth = document.querySelector('#auth');
                 const authCodeInput = UI.AuthCodeInput.init(auth);
                 const container = $.prev(auth).shift();
                 $.addClass(auth, 'runtime');
                 authCodeInput.dispose();
-                return !$.isConnected(container) &&
-                    !$.hasData(auth, 'authcodeinput') &&
-                    authCodeInput.node === null &&
-                    authCodeInput.options === null;
-            })).toBe(true);
+                return {
+                    connected: container.isConnected,
+                    registered: $.hasData(auth, 'authcodeinput'),
+                    node: authCodeInput.node,
+                    options: authCodeInput.options,
+                };
+            })).toEqual({ connected: false, registered: false, node: null, options: null });
 
             await expect(page.locator('#auth')).toHaveClass('existing runtime');
             await expect(page.locator('#auth')).toHaveAttribute('tabindex', '4');
@@ -125,11 +113,8 @@ test.describe('AuthCodeInput', () => {
 
         test('restores existing hidden and absent tabindex state', async ({ page }) => {
             await page.evaluate((_) => {
-                $.setHtml(
-                    document.body,
-                    '<input class="visually-hidden existing" id="auth">',
-                );
-                const auth = $.findOne('#auth');
+                document.body.innerHTML = '<input class="visually-hidden existing" id="auth">';
+                const auth = document.querySelector('#auth');
                 UI.AuthCodeInput.init(auth).dispose();
             });
 
@@ -148,163 +133,160 @@ test.describe('AuthCodeInput', () => {
 
         test('removes the AuthCodeInput when the original input is removed', async ({ page }) => {
             expect(await page.evaluate((_) => {
-                const auth = $.findOne('#auth');
+                const auth = document.querySelector('#auth');
                 const authCodeInput = UI.AuthCodeInput.init(auth);
                 const container = $.prev(auth).shift();
                 $.remove(auth);
-                return !$.isConnected(container) &&
-                    authCodeInput.node === null &&
-                    authCodeInput.options === null &&
-                    !$.isConnected(auth);
-            })).toBe(true);
+                return {
+                    containerConnected: container.isConnected,
+                    inputConnected: auth.isConnected,
+                    node: authCodeInput.node,
+                    options: authCodeInput.options,
+                };
+            })).toEqual({ containerConnected: false, inputConnected: false, node: null, options: null });
 
             await expect(page.locator('#auth')).toHaveCount(0);
             await expect(page.locator('.d-flex')).toHaveCount(0);
         });
     });
 
-    test.describe('#clear', () => {
-        test('clears the value', async ({ page }) => {
-            await page.evaluate((_) => {
-                const authCodeInput = UI.AuthCodeInput.init($.findOne('#auth'));
-                authCodeInput.setValue('123');
-                authCodeInput.clear();
+    for (const { name, init } of [
+        { name: 'class', init: () => UI.AuthCodeInput.init(document.querySelector('#auth')) },
+        { name: 'QuerySet', init: () => $('#auth').authcodeinput() },
+    ]) {
+        test.describe(name, () => {
+            test.beforeEach(async ({ page }) => {
+                await page.evaluate(init);
             });
 
-            await expect(page.locator('#auth')).toHaveValue('');
-            const inputs = page.locator('.d-flex input');
-            await expect(inputs).toHaveCount(6);
-            for (let index = 0; index < 6; index++) {
-                await expect(inputs.nth(index)).toHaveValue('');
+            for (const { method, args, value } of [
+                { method: 'clear', args: [], value: '' },
+                { method: 'setValue', args: ['1234'], value: '1234' },
+            ]) {
+                test(`#${method}`, async ({ page }) => {
+                    await page.evaluate(({ name, method, args }) => {
+                        const instance = $.getData('#auth', 'authcodeinput');
+                        instance.setValue('987654');
+                        if (name === 'class') {
+                            instance[method](...args);
+                        } else {
+                            $('#auth').authcodeinput(method, ...args);
+                        }
+                    }, { name, method, args });
+
+                    await expect(page.locator('#auth')).toHaveValue(value);
+                    const inputs = page.locator('.d-flex input');
+                    await expect(inputs).toHaveCount(6);
+                    for (let index = 0; index < 6; index++) {
+                        await expect(inputs.nth(index)).toHaveValue(value[index] || '');
+                    }
+                });
             }
-        });
 
-        test('clears the value (query)', async ({ page }) => {
-            await page.evaluate((_) => {
-                $('#auth').authcodeinput();
-                $('#auth').authcodeinput('setValue', '123');
-                $('#auth').authcodeinput('clear');
+            for (const method of ['disable', 'enable']) {
+                test(`#${method}`, async ({ page }) => {
+                    await page.evaluate(({ name, method }) => {
+                        const instance = $.getData('#auth', 'authcodeinput');
+                        if (method === 'enable') {
+                            instance.disable();
+                        }
+                        if (name === 'class') {
+                            instance[method]();
+                        } else {
+                            $('#auth').authcodeinput(method);
+                        }
+                    }, { name, method });
+
+                    const enabled = method === 'enable';
+                    await expect(page.locator('#auth')).toBeEnabled({ enabled });
+                    const inputs = page.locator('.d-flex input');
+                    await expect(inputs).toHaveCount(6);
+                    for (let index = 0; index < 6; index++) {
+                        await expect(inputs.nth(index)).toBeEnabled({ enabled });
+                    }
+                });
+            }
+
+            test('#getValue', async ({ page }) => {
+                expect(await page.evaluate((name) => {
+                    const instance = $.getData('#auth', 'authcodeinput');
+                    instance.setValue('1234');
+                    return name === 'class' ? instance.getValue() : $('#auth').authcodeinput('getValue');
+                }, name)).toBe('1234');
             });
-
-            await expect(page.locator('#auth')).toHaveValue('');
         });
-    });
-
-    test.describe('#disable', () => {
-        test('disables the AuthCodeInput', async ({ page }) => {
-            await page.evaluate((_) => {
-                const authCodeInput = UI.AuthCodeInput.init($.findOne('#auth'));
-                authCodeInput.disable();
-            });
-
-            await expect(page.locator('#auth')).toBeDisabled();
-            await expect(page.locator('.d-flex input:disabled')).toHaveCount(6);
-        });
-
-        test('disables the AuthCodeInput (query)', async ({ page }) => {
-            await page.evaluate((_) => {
-                $('#auth').authcodeinput();
-                $('#auth').authcodeinput('disable');
-            });
-
-            await expect(page.locator('#auth')).toBeDisabled();
-            await expect(page.locator('.d-flex input:disabled')).toHaveCount(6);
-        });
-    });
-
-    test.describe('#enable', () => {
-        test('enables the AuthCodeInput', async ({ page }) => {
-            await page.evaluate((_) => {
-                $.setHtml(document.body, '<input id="auth" disabled>');
-                const authCodeInput = UI.AuthCodeInput.init($.findOne('#auth'));
-                authCodeInput.enable();
-            });
-
-            await expect(page.locator('#auth')).toBeEnabled();
-            await expect(page.locator('.d-flex input:enabled')).toHaveCount(6);
-        });
-
-        test('enables the AuthCodeInput (query)', async ({ page }) => {
-            await page.evaluate((_) => {
-                $.setHtml(document.body, '<input id="auth" disabled>');
-                $('#auth').authcodeinput();
-                $('#auth').authcodeinput('enable');
-            });
-
-            await expect(page.locator('#auth')).toBeEnabled();
-            await expect(page.locator('.d-flex input:enabled')).toHaveCount(6);
-        });
-    });
-
-    test.describe('#getValue', () => {
-        test('gets the value', async ({ page }) => {
-            expect(await page.evaluate((_) => {
-                const authCodeInput = UI.AuthCodeInput.init($.findOne('#auth'));
-                authCodeInput.setValue('1234');
-                return authCodeInput.getValue();
-            })).toBe('1234');
-        });
-
-        test('gets the value (query)', async ({ page }) => {
-            expect(await page.evaluate((_) => {
-                $('#auth').authcodeinput();
-                $('#auth').authcodeinput('setValue', '1234');
-                return $('#auth').authcodeinput('getValue');
-            })).toBe('1234');
-        });
-    });
+    }
 
     test.describe('#setValue', () => {
-        test('sets the value', async ({ page }) => {
-            await page.evaluate((_) => {
-                const authCodeInput = UI.AuthCodeInput.init($.findOne('#auth'));
-                authCodeInput.setValue('1234');
+        for (const { name, value, expected, length } of [
+            { name: 'filters', value: 'a1b2c3', expected: '123', length: 6 },
+            { name: 'truncates', value: '123456', expected: '123', length: 3 },
+        ]) {
+            test(`${name} the value`, async ({ page }) => {
+                await page.evaluate(({ value, length }) => {
+                    UI.AuthCodeInput.init(document.querySelector('#auth'), { length }).setValue(value);
+                }, { value, length });
+
+                await expect(page.locator('#auth')).toHaveValue(expected);
+                const inputs = page.locator('.d-flex input');
+                await expect(inputs).toHaveCount(length);
+                for (let index = 0; index < length; index++) {
+                    await expect(inputs.nth(index)).toHaveValue(expected[index] || '');
+                }
             });
-
-            await expect(page.locator('#auth')).toHaveValue('1234');
-            const inputs = page.locator('.d-flex input');
-            const values = ['1', '2', '3', '4', '', ''];
-            await expect(inputs).toHaveCount(values.length);
-            for (const [index, value] of values.entries()) {
-                await expect(inputs.nth(index)).toHaveValue(value);
-            }
-        });
-
-        test('sets the value (query)', async ({ page }) => {
-            await page.evaluate((_) => {
-                $('#auth').authcodeinput();
-                $('#auth').authcodeinput('setValue', '1234');
-            });
-
-            await expect(page.locator('#auth')).toHaveValue('1234');
-        });
-
-        test('filters the value', async ({ page }) => {
-            await page.evaluate((_) => {
-                const authCodeInput = UI.AuthCodeInput.init($.findOne('#auth'));
-                authCodeInput.setValue('a1b2c3');
-            });
-
-            await expect(page.locator('#auth')).toHaveValue('123');
-        });
-
-        test('truncates the value to the rendered length', async ({ page }) => {
-            await page.evaluate((_) => {
-                const authCodeInput = UI.AuthCodeInput.init(
-                    $.findOne('#auth'),
-                    { length: 3 },
-                );
-                authCodeInput.setValue('123456');
-            });
-
-            await expect(page.locator('#auth')).toHaveValue('123');
-        });
+        }
     });
 
     test.describe('input attributes', () => {
+        test('inherits the initial disabled state', async ({ page }) => {
+            await page.evaluate((_) => {
+                const auth = document.querySelector('#auth');
+                auth.disabled = true;
+                UI.AuthCodeInput.init(auth);
+            });
+
+            await expect(page.locator('.d-flex input:disabled')).toHaveCount(6);
+        });
+
+        test('preserves readonly during typing, backspace and paste', async ({ page }) => {
+            await page.evaluate((_) => {
+                const auth = document.querySelector('#auth');
+                auth.readOnly = true;
+                auth.value = '12';
+                UI.AuthCodeInput.init(auth);
+            });
+
+            const inputs = page.locator('.d-flex input');
+            await expect(page.locator('.d-flex input[readonly]')).toHaveCount(6);
+            await inputs.first().press('3');
+            await expect(page.locator('#auth')).toHaveValue('12');
+            await inputs.first().press('Backspace');
+            await expect(page.locator('#auth')).toHaveValue('12');
+            await inputs.nth(2).press('Backspace');
+            await expect(page.locator('#auth')).toHaveValue('12');
+            await inputs.first().evaluate((input) => {
+                const clipboardData = new DataTransfer();
+                clipboardData.setData('text', '654321');
+                input.dispatchEvent(new ClipboardEvent('paste', {
+                    bubbles: true,
+                    cancelable: true,
+                    clipboardData,
+                }));
+            });
+
+            await expect(page.locator('#auth')).toHaveValue('12');
+            for (let index = 0; index < 6; index++) {
+                await expect(inputs.nth(index)).toHaveValue('12'[index] || '');
+            }
+
+            await page.evaluate((_) => $.getData('#auth', 'authcodeinput').setValue('345678'));
+            await expect(page.locator('#auth')).toHaveValue('345678');
+            await expect(inputs.first()).toHaveValue('3');
+        });
+
         test('renders autocomplete attributes', async ({ page }) => {
             await page.evaluate((_) => {
-                UI.AuthCodeInput.init($.findOne('#auth'));
+                UI.AuthCodeInput.init(document.querySelector('#auth'));
             });
 
             const inputs = page.locator('.d-flex input');
@@ -315,9 +297,7 @@ test.describe('AuthCodeInput', () => {
 
         test('inherits required and ARIA attributes', async ({ page }) => {
             await page.evaluate((_) => {
-                $.setHtml(
-                    document.body,
-                    `
+                document.body.innerHTML = `
                         <span id="description">Code</span>
                         <span id="error">Invalid</span>
                         <input
@@ -329,10 +309,9 @@ test.describe('AuthCodeInput', () => {
                             required
                         >
                         <input id="auth2">
-                    `,
-                );
-                UI.AuthCodeInput.init($.findOne('#auth'));
-                UI.AuthCodeInput.init($.findOne('#auth2'));
+                    `;
+                UI.AuthCodeInput.init(document.querySelector('#auth'));
+                UI.AuthCodeInput.init(document.querySelector('#auth2'));
             });
 
             const containers = page.locator('.d-flex');
@@ -354,7 +333,7 @@ test.describe('AuthCodeInput', () => {
     test.describe('events', () => {
         test('triggers a change event when the value changes', async ({ page }) => {
             expect(await page.evaluate((_) => {
-                const auth = $.findOne('#auth');
+                const auth = document.querySelector('#auth');
                 UI.AuthCodeInput.init(auth);
                 const events = [];
                 $.addEvent(auth, 'change.ui.authcodeinput', (event) => {
@@ -401,7 +380,7 @@ test.describe('AuthCodeInput', () => {
     test.describe('user events', () => {
         test.beforeEach(async ({ page }) => {
             await page.evaluate((_) => {
-                UI.AuthCodeInput.init($.findOne('#auth'));
+                UI.AuthCodeInput.init(document.querySelector('#auth'));
             });
         });
 
@@ -427,6 +406,44 @@ test.describe('AuthCodeInput', () => {
             await expect(input).toBeFocused();
         });
 
+        for (const modifier of ['ctrlKey', 'metaKey']) {
+            for (const key of ['a', 'c', 'v', 'x']) {
+                test(`allows ${modifier} + ${key}`, async ({ page }) => {
+                    const prevented = await page.locator('.d-flex input').first().evaluate((input, { modifier, key }) => {
+                        const event = new KeyboardEvent('keydown', {
+                            bubbles: true,
+                            cancelable: true,
+                            key,
+                            code: `Key${key.toUpperCase()}`,
+                            [modifier]: true,
+                        });
+                        input.dispatchEvent(event);
+                        return event.defaultPrevented;
+                    }, { modifier, key });
+
+                    expect(prevented).toBe(false);
+                });
+            }
+        }
+
+        test('supports keyboard select-all, copy, cut and paste', async ({ page, browserName }) => {
+            test.skip(browserName !== 'chromium', 'Clipboard permissions are configured for Chromium.');
+            await page.evaluate((_) => $.getData('#auth', 'authcodeinput').setValue('1'));
+            const input = page.locator('.d-flex input').first();
+            await input.focus();
+            // Remove the selection made by focusin so select-all must select the digit.
+            await input.evaluate((input) => input.setSelectionRange(1, 1));
+            await input.press('ControlOrMeta+a');
+            expect(await input.evaluate((input) => [input.selectionStart, input.selectionEnd])).toEqual([0, 1]);
+            await input.press('ControlOrMeta+c');
+            expect(await page.evaluate((_) => navigator.clipboard.readText())).toBe('1');
+            await input.press('ControlOrMeta+x');
+            await expect(page.locator('#auth')).toHaveValue('');
+            await input.press('ControlOrMeta+v');
+            await expect(page.locator('#auth')).toHaveValue('1');
+            await expect(page.locator('.d-flex input').nth(1)).toBeFocused();
+        });
+
         test('keeps focus on the last input', async ({ page }) => {
             await page.evaluate((_) => {
                 $.getData('#auth', 'authcodeinput').setValue('12345');
@@ -441,7 +458,7 @@ test.describe('AuthCodeInput', () => {
 
         test('distributes pasted input', async ({ page }) => {
             const allowed = await page.evaluate((_) => {
-                const auth = $.findOne('#auth');
+                const auth = document.querySelector('#auth');
                 const inputs = $.find('input', $.prev(auth).shift());
                 const event = new ClipboardEvent('paste', {
                     bubbles: true,
@@ -503,7 +520,7 @@ test.describe('AuthCodeInput', () => {
 
         test('distributes multi-character autofill input', async ({ page }) => {
             await page.evaluate((_) => {
-                const auth = $.findOne('#auth');
+                const auth = document.querySelector('#auth');
                 const inputs = $.find('input', $.prev(auth).shift());
                 $.setValue(inputs[0], '65a4-321');
                 $.triggerEvent(inputs[0], 'input');
@@ -586,7 +603,7 @@ test.describe('AuthCodeInput', () => {
 
         test('uses physical arrow directions in RTL', async ({ page }) => {
             await page.evaluate((_) => {
-                const auth = $.findOne('#auth');
+                const auth = document.querySelector('#auth');
                 $.setAttribute(auth, { dir: 'rtl' });
                 $.getData(auth, 'authcodeinput').dispose();
                 UI.AuthCodeInput.init(auth).setValue('123456');
@@ -658,82 +675,10 @@ test.describe('AuthCodeInput', () => {
         });
     });
 
-    test.describe('autoSubmit option', () => {
-        test('submits the form when the code is complete', async ({ page }) => {
-            await page.evaluate((_) => {
-                $.setHtml(
-                    document.body,
-                    '<form id="form"><input id="auth"><button type="submit">Submit</button></form>',
-                );
-                window.authCodeInputSubmits = 0;
-                $.addEvent('#form', 'submit', (event) => {
-                    event.preventDefault();
-                    window.authCodeInputSubmits++;
-                });
-                UI.AuthCodeInput.init(
-                    $.findOne('#auth'),
-                    { autoSubmit: true, length: 3 },
-                );
-                const inputs = $.find('input', $.prev('#auth').shift());
-                for (const [index, value] of ['1', '2'].entries()) {
-                    $.setValue(inputs[index], value);
-                    $.triggerEvent(inputs[index], 'input');
-                }
-            });
-
-            expect(await page.evaluate((_) => window.authCodeInputSubmits)).toBe(0);
-
-            await page.evaluate((_) => {
-                const inputs = $.find('input', $.prev('#auth').shift());
-                $.setValue(inputs[2], '3');
-                $.triggerEvent(inputs[2], 'input');
-            });
-
-            expect(await page.evaluate((_) => window.authCodeInputSubmits)).toBe(1);
-        });
-
-        test('works with autoSubmit option (data-ui-auto-submit)', async ({ page }) => {
-            expect(await page.evaluate((_) => {
-                $.setHtml(
-                    document.body,
-                    `
-                        <form id="form">
-                            <input id="auth" data-ui-auto-submit="true" data-ui-length="2">
-                        </form>
-                    `,
-                );
-                let submits = 0;
-                $.addEvent('#form', 'submit', (event) => {
-                    event.preventDefault();
-                    submits++;
-                });
-                UI.AuthCodeInput.init($.findOne('#auth'));
-                const inputs = $.find('input', $.prev('#auth').shift());
-                for (const [index, value] of ['1', '2'].entries()) {
-                    $.setValue(inputs[index], value);
-                    $.triggerEvent(inputs[index], 'input');
-                }
-                return submits;
-            })).toBe(1);
-        });
-
-        test('does not require a form', async ({ page }) => {
-            await page.evaluate((_) => {
-                const authCodeInput = UI.AuthCodeInput.init(
-                    $.findOne('#auth'),
-                    { autoSubmit: true, length: 2 },
-                );
-                authCodeInput.setValue('12');
-            });
-
-            await expect(page.locator('#auth')).toHaveValue('12');
-        });
-    });
-
     test.describe('getAriaLabel option', () => {
         test('renders sequential labels', async ({ page }) => {
             await page.evaluate((_) => {
-                UI.AuthCodeInput.init($.findOne('#auth'));
+                UI.AuthCodeInput.init(document.querySelector('#auth'));
             });
 
             const inputs = page.locator('.d-flex input');
@@ -753,7 +698,7 @@ test.describe('AuthCodeInput', () => {
 
         test('works with getAriaLabel option', async ({ page }) => {
             await page.evaluate((_) => {
-                UI.AuthCodeInput.init($.findOne('#auth'), {
+                UI.AuthCodeInput.init(document.querySelector('#auth'), {
                     getAriaLabel: (index) => `Digit ${index}`,
                     length: 3,
                 });
@@ -769,67 +714,45 @@ test.describe('AuthCodeInput', () => {
     });
 
     test.describe('length option', () => {
-        test('renders the default segmented layout', async ({ page }) => {
-            await page.evaluate((_) => {
-                UI.AuthCodeInput.init($.findOne('#auth'));
+        for (const { name, options = {}, attributes = {}, segments } of [
+            { name: 'default', segments: [3, 3] },
+            { name: 'option', options: { length: [2, 4] }, segments: [2, 4] },
+            { name: 'data attribute', attributes: { 'data-ui-length': '[2,2]' }, segments: [2, 2] },
+            { name: 'shorter maxlength', attributes: { maxlength: '4' }, segments: [4] },
+            { name: 'longer maxlength', attributes: { maxlength: '8' }, segments: [3, 3] },
+        ]) {
+            test(`renders the segmented layout (${name})`, async ({ page }) => {
+                await page.evaluate(({ options, attributes }) => {
+                    const auth = document.querySelector('#auth');
+                    for (const [name, value] of Object.entries(attributes)) {
+                        auth.setAttribute(name, value);
+                    }
+                    UI.AuthCodeInput.init(auth, options);
+                }, { options, attributes });
+
+                const container = page.locator('.d-flex');
+                const length = segments.reduce((total, segment) => total + segment, 0);
+                await expect(container).toHaveClass('d-flex justify-content-between');
+                await expect(container.locator('input')).toHaveCount(length);
+                await expect(container.locator(':scope > div.form-input.w-auto')).toHaveCount(length);
+                await expect(container.locator(':scope > span.vr.align-self-center.fs-5'))
+                    .toHaveCount(segments.length - 1);
+                await expect(container.locator(':scope > *')).toHaveCount(length + segments.length - 1);
+                let offset = 0;
+                for (const segment of segments.slice(0, -1)) {
+                    offset += segment;
+                    await expect(container.locator(':scope > *').nth(offset))
+                        .toHaveClass('vr align-self-center fs-5');
+                    offset++;
+                }
             });
-
-            const container = page.locator('.d-flex');
-            await expect(container).toHaveClass('d-flex justify-content-between');
-            await expect(container.locator('.form-input')).toHaveCount(6);
-            await expect(container.locator('.vr')).toHaveCount(1);
-            await expect(container.locator('input')).toHaveCount(6);
-        });
-
-        test('works with length option', async ({ page }) => {
-            await page.evaluate((_) => {
-                UI.AuthCodeInput.init($.findOne('#auth'), { length: [2, 4] });
-            });
-
-            const container = page.locator('.d-flex');
-            await expect(container.locator(':scope > *')).toHaveCount(7);
-            await expect(container.locator(':scope > div.form-input.w-auto')).toHaveCount(6);
-            await expect(container.locator(':scope > span.vr.align-self-center.fs-5'))
-                .toHaveCount(1);
-            await expect(container.locator(':scope > :nth-child(3)'))
-                .toHaveClass('vr align-self-center fs-5');
-        });
-
-        test('works with length option (data-ui-length)', async ({ page }) => {
-            await page.evaluate((_) => {
-                $.setDataset('#auth', { uiLength: [2, 2] });
-                UI.AuthCodeInput.init($.findOne('#auth'));
-            });
-
-            await expect(page.locator('.d-flex input')).toHaveCount(4);
-            await expect(page.locator('.d-flex .vr')).toHaveCount(1);
-        });
-
-        test('limits the layout with maxlength', async ({ page }) => {
-            await page.evaluate((_) => {
-                $.setAttribute('#auth', { maxlength: 4 });
-                UI.AuthCodeInput.init($.findOne('#auth'));
-            });
-
-            await expect(page.locator('.d-flex input')).toHaveCount(4);
-            await expect(page.locator('.d-flex .vr')).toHaveCount(0);
-        });
-
-        test('keeps segments when maxlength is longer', async ({ page }) => {
-            await page.evaluate((_) => {
-                $.setAttribute('#auth', { maxlength: 8 });
-                UI.AuthCodeInput.init($.findOne('#auth'));
-            });
-
-            await expect(page.locator('.d-flex input')).toHaveCount(6);
-            await expect(page.locator('.d-flex .vr')).toHaveCount(1);
-        });
+        }
     });
 
     test.describe('regExp option', () => {
         test('renders numeric input hints by default', async ({ page }) => {
             await page.evaluate((_) => {
-                UI.AuthCodeInput.init($.findOne('#auth'));
+                UI.AuthCodeInput.init(document.querySelector('#auth'));
             });
 
             await expect(page.locator(
@@ -837,36 +760,27 @@ test.describe('AuthCodeInput', () => {
             )).toHaveCount(6);
         });
 
-        test('works with regExp option', async ({ page }) => {
-            await page.evaluate((_) => {
-                const authCodeInput = UI.AuthCodeInput.init(
-                    $.findOne('#auth'),
-                    { regExp: '[A-Z]' },
-                );
-                authCodeInput.setValue('A1B2');
+        for (const source of ['option', 'data attribute']) {
+            test(`filters alphabetic input (${source})`, async ({ page }) => {
+                await page.evaluate((source) => {
+                    const auth = document.querySelector('#auth');
+                    if (source === 'data attribute') {
+                        auth.setAttribute('data-ui-reg-exp', '[A-Z]');
+                    }
+                    const options = source === 'option' ? { regExp: '[A-Z]' } : {};
+                    UI.AuthCodeInput.init(auth, options).setValue('A1B2');
+                }, source);
+
+                await expect(page.locator('#auth')).toHaveValue('AB');
+                await expect(page.locator('.d-flex input[inputmode="text"][pattern="[A-Z]"]'))
+                    .toHaveCount(6);
             });
-
-            await expect(page.locator('#auth')).toHaveValue('AB');
-            await expect(page.locator(
-                '.d-flex input[inputmode="text"][pattern="[A-Z]"]',
-            )).toHaveCount(6);
-        });
-
-        test('works with regExp option (data-ui-reg-exp)', async ({ page }) => {
-            await page.evaluate((_) => {
-                $.setDataset('#auth', { uiRegExp: '[A-Z]' });
-                const authCodeInput = UI.AuthCodeInput.init($.findOne('#auth'));
-                authCodeInput.setValue('A1B2');
-            });
-
-            await expect(page.locator('#auth')).toHaveValue('AB');
-            await expect(page.locator('.d-flex input[pattern="[A-Z]"]')).toHaveCount(6);
-        });
+        }
 
         test('preserves the original inputmode', async ({ page }) => {
             await page.evaluate((_) => {
                 $.setAttribute('#auth', { inputmode: 'email' });
-                UI.AuthCodeInput.init($.findOne('#auth'));
+                UI.AuthCodeInput.init(document.querySelector('#auth'));
             });
 
             await expect(page.locator('.d-flex input[inputmode="email"]')).toHaveCount(6);
@@ -874,33 +788,27 @@ test.describe('AuthCodeInput', () => {
     });
 
     test.describe('style option', () => {
-        test('renders outline inputs by default', async ({ page }) => {
-            await page.evaluate((_) => {
-                UI.AuthCodeInput.init($.findOne('#auth'));
+        for (const { name, options = {}, attribute, style } of [
+            { name: 'default', style: 'outline' },
+            { name: 'option', options: { style: 'filled' }, style: 'filled' },
+            { name: 'data attribute', attribute: 'filled', style: 'filled' },
+        ]) {
+            test(`renders styled inputs (${name})`, async ({ page }) => {
+                await page.evaluate(({ options, attribute }) => {
+                    const auth = document.querySelector('#auth');
+                    if (attribute) {
+                        auth.setAttribute('data-ui-style', attribute);
+                    }
+                    UI.AuthCodeInput.init(auth, options);
+                }, { options, attribute });
+
+                const inputs = page.locator('.d-flex input');
+                await expect(inputs).toHaveCount(6);
+                for (let index = 0; index < 6; index++) {
+                    await expect(inputs.nth(index)).toHaveClass(`input-${style} fw-bold text-center px-0`);
+                }
+                await expect(page.locator('.ripple-line')).toHaveCount(0);
             });
-
-            await expect(page.locator('.d-flex input').first())
-                .toHaveClass('input-outline fw-bold text-center px-0');
-        });
-
-        test('works with style option', async ({ page }) => {
-            await page.evaluate((_) => {
-                UI.AuthCodeInput.init($.findOne('#auth'), { style: 'filled' });
-            });
-
-            await expect(page.locator('.d-flex input').first())
-                .toHaveClass('input-filled fw-bold text-center px-0');
-            await expect(page.locator('.ripple-line')).toHaveCount(0);
-        });
-
-        test('works with style option (data-ui-style)', async ({ page }) => {
-            await page.evaluate((_) => {
-                $.setDataset('#auth', { uiStyle: 'filled' });
-                UI.AuthCodeInput.init($.findOne('#auth'));
-            });
-
-            await expect(page.locator('.d-flex input').first())
-                .toHaveClass('input-filled fw-bold text-center px-0');
-        });
+        }
     });
 });
