@@ -15,7 +15,7 @@ Segmented authentication-code input for Frost UI with filtering, keyboard naviga
 - Numeric codes by default, with custom per-character regular expressions
 - Multi-character paste and one-time-code autofill distribution
 - Arrow-key navigation, backspace synchronization, focus redirection, and managed tab order
-- Outline and filled Frost UI v3 input styles
+- Outline and filled Frost UI v4 input styles
 - System-aware light and dark themes with RTL behavior
 - Native `AuthCodeInput` class and `authcodeinput` fQuery plugin
 - Prebuilt ESM and UMD bundles with source maps
@@ -26,7 +26,7 @@ Segmented authentication-code input for Frost UI with filtering, keyboard naviga
 
 ### Browser projects / bundlers
 
-Install AuthCodeInput with its Frost UI and fQuery peers:
+Install AuthCodeInput with its Frost UI v4 and fQuery v5 peers:
 
 ```bash
 npm i @fr0st/ui-authcodeinput @fr0st/ui @fr0st/query

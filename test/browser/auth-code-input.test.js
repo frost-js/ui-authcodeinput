@@ -8,7 +8,7 @@ test.beforeEach(async ({ page }) => {
 test.describe('AuthCodeInput', () => {
     test.beforeEach(async ({ page }) => {
         await page.evaluate((_) => {
-            $.setHTML(
+            $.setHtml(
                 document.body,
                 '<input id="auth"><input id="auth2">',
             );
@@ -77,7 +77,7 @@ test.describe('AuthCodeInput', () => {
 
         test('renders an initial value', async ({ page }) => {
             await page.evaluate((_) => {
-                $.setHTML(document.body, '<input id="auth" value="1234">');
+                $.setHtml(document.body, '<input id="auth" value="1234">');
                 UI.AuthCodeInput.init($.findOne('#auth'));
             });
 
@@ -92,7 +92,7 @@ test.describe('AuthCodeInput', () => {
 
         test('filters an initial value', async ({ page }) => {
             await page.evaluate((_) => {
-                $.setHTML(document.body, '<input id="auth" value="1a2-3">');
+                $.setHtml(document.body, '<input id="auth" value="1a2-3">');
                 UI.AuthCodeInput.init($.findOne('#auth'));
             });
 
@@ -103,7 +103,7 @@ test.describe('AuthCodeInput', () => {
     test.describe('#dispose', () => {
         test('removes the AuthCodeInput and restores the original input', async ({ page }) => {
             expect(await page.evaluate((_) => {
-                $.setHTML(
+                $.setHtml(
                     document.body,
                     '<input class="existing" id="auth" tabindex="4">',
                 );
@@ -125,7 +125,7 @@ test.describe('AuthCodeInput', () => {
 
         test('restores existing hidden and absent tabindex state', async ({ page }) => {
             await page.evaluate((_) => {
-                $.setHTML(
+                $.setHtml(
                     document.body,
                     '<input class="visually-hidden existing" id="auth">',
                 );
@@ -215,7 +215,7 @@ test.describe('AuthCodeInput', () => {
     test.describe('#enable', () => {
         test('enables the AuthCodeInput', async ({ page }) => {
             await page.evaluate((_) => {
-                $.setHTML(document.body, '<input id="auth" disabled>');
+                $.setHtml(document.body, '<input id="auth" disabled>');
                 const authCodeInput = UI.AuthCodeInput.init($.findOne('#auth'));
                 authCodeInput.enable();
             });
@@ -226,7 +226,7 @@ test.describe('AuthCodeInput', () => {
 
         test('enables the AuthCodeInput (query)', async ({ page }) => {
             await page.evaluate((_) => {
-                $.setHTML(document.body, '<input id="auth" disabled>');
+                $.setHtml(document.body, '<input id="auth" disabled>');
                 $('#auth').authcodeinput();
                 $('#auth').authcodeinput('enable');
             });
@@ -315,7 +315,7 @@ test.describe('AuthCodeInput', () => {
 
         test('inherits required and ARIA attributes', async ({ page }) => {
             await page.evaluate((_) => {
-                $.setHTML(
+                $.setHtml(
                     document.body,
                     `
                         <span id="description">Code</span>
@@ -661,7 +661,7 @@ test.describe('AuthCodeInput', () => {
     test.describe('autoSubmit option', () => {
         test('submits the form when the code is complete', async ({ page }) => {
             await page.evaluate((_) => {
-                $.setHTML(
+                $.setHtml(
                     document.body,
                     '<form id="form"><input id="auth"><button type="submit">Submit</button></form>',
                 );
@@ -694,7 +694,7 @@ test.describe('AuthCodeInput', () => {
 
         test('works with autoSubmit option (data-ui-auto-submit)', async ({ page }) => {
             expect(await page.evaluate((_) => {
-                $.setHTML(
+                $.setHtml(
                     document.body,
                     `
                         <form id="form">
