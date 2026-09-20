@@ -23,7 +23,6 @@ const test = base.extend({
                     throw new Error('Failed to initialize AuthCodeInput on the test page.');
                 }
 
-                window.$ = window.fQuery;
                 document.body.replaceChildren();
             });
 
