@@ -173,6 +173,7 @@ var AuthCodeInput = class extends BaseComponent {
 			this.#distributeValue(e.clipboardData.getData("text"), this.#inputs.indexOf(e.currentTarget));
 		});
 		$.addEventDelegate(this.#container, "keydown.ui.authcodeinput", "input", (e) => {
+			if (e.ctrlKey || e.metaKey) return;
 			const target = e.currentTarget;
 			const targetIndex = this.#inputs.indexOf(target);
 			switch (e.code) {

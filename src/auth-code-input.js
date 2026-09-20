@@ -226,6 +226,10 @@ export default class AuthCodeInput extends BaseComponent {
         });
 
         $.addEventDelegate(this.#container, 'keydown.ui.authcodeinput', 'input', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                return;
+            }
+
             const target = e.currentTarget;
             const targetIndex = this.#inputs.indexOf(target);
 

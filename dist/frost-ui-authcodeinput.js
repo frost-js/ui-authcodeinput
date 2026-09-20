@@ -205,6 +205,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				this.#distributeValue(e.clipboardData.getData("text"), this.#inputs.indexOf(e.currentTarget));
 			});
 			_fr0st_query.default.addEventDelegate(this.#container, "keydown.ui.authcodeinput", "input", (e) => {
+				if (e.ctrlKey || e.metaKey) return;
 				const target = e.currentTarget;
 				const targetIndex = this.#inputs.indexOf(target);
 				switch (e.code) {
