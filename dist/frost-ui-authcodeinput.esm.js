@@ -217,7 +217,7 @@ var AuthCodeInput = class extends BaseComponent {
 			while (char && !char.match(this.#regExp));
 			$.setValue(input, char || "");
 		}
-		this.#updateValue();
+		this.#updateValue({ notify: false });
 	}
 	/**
 	* Refreshes the disabled state.
@@ -279,14 +279,16 @@ var AuthCodeInput = class extends BaseComponent {
 	}
 	/**
 	* Updates the underlying input value.
+	* @param {{notify?: boolean}} [options] Whether to emit a change event and allow automatic submission.
 	*/
-	#updateValue() {
+	#updateValue({ notify = true } = {}) {
 		const newValue = this.#inputs.map((node) => $.getValue(node)).join("");
 		const lastIndex = this.#inputs.findLastIndex((input) => $.getValue(input));
 		for (const [index, input] of this.#inputs.entries()) if (index && index > lastIndex + 1) $.setAttribute(input, { tabindex: -1 });
 		else $.removeAttribute(input, "tabindex");
 		if (newValue === this.getValue()) return;
 		$.setValue(this.node, newValue);
+		if (!notify) return;
 		$.triggerEvent(this.node, "change.ui.authcodeinput");
 		if (this.options.autoSubmit && newValue.length === this.#length) {
 			const form = $.closest(this.node, "form").shift();

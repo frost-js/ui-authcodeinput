@@ -294,7 +294,7 @@ export default class AuthCodeInput extends BaseComponent {
             $.setValue(input, char || '');
         }
 
-        this.#updateValue();
+        this.#updateValue({ notify: false });
     }
 
     /**
@@ -394,8 +394,9 @@ export default class AuthCodeInput extends BaseComponent {
 
     /**
      * Updates the underlying input value.
+     * @param {{notify?: boolean}} [options] Whether to emit a change event and allow automatic submission.
      */
-    #updateValue() {
+    #updateValue({ notify = true } = {}) {
         const newValue = this.#inputs
             .map((node) => $.getValue(node))
             .join('');
@@ -414,6 +415,11 @@ export default class AuthCodeInput extends BaseComponent {
         }
 
         $.setValue(this.node, newValue);
+
+        if (!notify) {
+            return;
+        }
+
         $.triggerEvent(this.node, 'change.ui.authcodeinput');
 
         if (this.options.autoSubmit && newValue.length === this.#length) {

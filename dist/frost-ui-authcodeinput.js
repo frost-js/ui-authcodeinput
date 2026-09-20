@@ -249,7 +249,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				while (char && !char.match(this.#regExp));
 				_fr0st_query.default.setValue(input, char || "");
 			}
-			this.#updateValue();
+			this.#updateValue({ notify: false });
 		}
 		/**
 		* Refreshes the disabled state.
@@ -311,14 +311,16 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		}
 		/**
 		* Updates the underlying input value.
+		* @param {{notify?: boolean}} [options] Whether to emit a change event and allow automatic submission.
 		*/
-		#updateValue() {
+		#updateValue({ notify = true } = {}) {
 			const newValue = this.#inputs.map((node) => _fr0st_query.default.getValue(node)).join("");
 			const lastIndex = this.#inputs.findLastIndex((input) => _fr0st_query.default.getValue(input));
 			for (const [index, input] of this.#inputs.entries()) if (index && index > lastIndex + 1) _fr0st_query.default.setAttribute(input, { tabindex: -1 });
 			else _fr0st_query.default.removeAttribute(input, "tabindex");
 			if (newValue === this.getValue()) return;
 			_fr0st_query.default.setValue(this.node, newValue);
+			if (!notify) return;
 			_fr0st_query.default.triggerEvent(this.node, "change.ui.authcodeinput");
 			if (this.options.autoSubmit && newValue.length === this.#length) {
 				const form = _fr0st_query.default.closest(this.node, "form").shift();
