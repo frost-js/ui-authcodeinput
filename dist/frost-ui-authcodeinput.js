@@ -103,7 +103,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			this.#events();
 			this.#refresh();
 			this.#refreshDisabled();
-			this.#updateValue();
 		}
 		/**
 		* Clears the AuthCodeInput.
@@ -226,14 +225,11 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				const target = e.currentTarget;
 				const targetIndex = this.#inputs.indexOf(target);
 				switch (e.code) {
-					case "ArrowLeft": {
-						const nextIndex = targetIndex + (_fr0st_query.default.css(this.#container, "direction") === "rtl" ? 1 : -1);
-						if (nextIndex < 0 || nextIndex >= this.#inputs.length) return;
-						_fr0st_query.default.focus(this.#inputs[nextIndex]);
-						break;
-					}
+					case "ArrowLeft":
 					case "ArrowRight": {
-						const nextIndex = targetIndex + (_fr0st_query.default.css(this.#container, "direction") === "rtl" ? -1 : 1);
+						let offset = e.code === "ArrowLeft" ? -1 : 1;
+						if (_fr0st_query.default.css(this.#container, "direction") === "rtl") offset *= -1;
+						const nextIndex = targetIndex + offset;
 						if (nextIndex < 0 || nextIndex >= this.#inputs.length) return;
 						_fr0st_query.default.focus(this.#inputs[nextIndex]);
 						break;
@@ -259,14 +255,8 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		* Refreshes the rendered input values.
 		*/
 		#refresh() {
-			const chars = _fr0st_query.default.getValue(this.node).split("");
-			for (const input of this.#inputs) {
-				let char;
-				do
-					char = chars.shift();
-				while (char && !char.match(this.#regExp));
-				_fr0st_query.default.setValue(input, char || "");
-			}
+			const chars = getValidCharacters(_fr0st_query.default.getValue(this.node), this.#regExp);
+			for (const [index, input] of this.#inputs.entries()) _fr0st_query.default.setValue(input, chars[index] || "");
 			this.#updateValue({ notify: false });
 		}
 		/**

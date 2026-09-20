@@ -72,7 +72,6 @@ export default class AuthCodeInput extends BaseComponent {
         this.#events();
         this.#refresh();
         this.#refreshDisabled();
-        this.#updateValue();
     }
 
     /**
@@ -263,19 +262,14 @@ export default class AuthCodeInput extends BaseComponent {
             const targetIndex = this.#inputs.indexOf(target);
 
             switch (e.code) {
-                case 'ArrowLeft': {
-                    const offset = $.css(this.#container, 'direction') === 'rtl' ? 1 : -1;
-                    const nextIndex = targetIndex + offset;
+                case 'ArrowLeft':
+                case 'ArrowRight': {
+                    let offset = e.code === 'ArrowLeft' ? -1 : 1;
 
-                    if (nextIndex < 0 || nextIndex >= this.#inputs.length) {
-                        return;
+                    if ($.css(this.#container, 'direction') === 'rtl') {
+                        offset *= -1;
                     }
 
-                    $.focus(this.#inputs[nextIndex]);
-                    break;
-                }
-                case 'ArrowRight': {
-                    const offset = $.css(this.#container, 'direction') === 'rtl' ? -1 : 1;
                     const nextIndex = targetIndex + offset;
 
                     if (nextIndex < 0 || nextIndex >= this.#inputs.length) {
@@ -318,16 +312,10 @@ export default class AuthCodeInput extends BaseComponent {
      * Refreshes the rendered input values.
      */
     #refresh() {
-        const chars = $.getValue(this.node).split('');
+        const chars = getValidCharacters($.getValue(this.node), this.#regExp);
 
-        for (const input of this.#inputs) {
-            let char;
-
-            do {
-                char = chars.shift();
-            } while (char && !char.match(this.#regExp));
-
-            $.setValue(input, char || '');
+        for (const [index, input] of this.#inputs.entries()) {
+            $.setValue(input, chars[index] || '');
         }
 
         this.#updateValue({ notify: false });
