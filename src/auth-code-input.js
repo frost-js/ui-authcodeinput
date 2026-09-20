@@ -455,8 +455,8 @@ export default class AuthCodeInput extends BaseComponent {
         if (
             this.#form &&
             this.options.autoSubmit &&
-            this.getValue() === newValue &&
-            newValue.length === this.#length
+            newValue.length === this.#length &&
+            newValue === this.getValue()
         ) {
             this.#form.requestSubmit();
         }

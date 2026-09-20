@@ -331,7 +331,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			if (!notify) return;
 			_fr0st_query.default.triggerEvent(this.node, "change.ui.authcodeinput");
 			if (!this.node) return;
-			if (this.#form && this.options.autoSubmit && this.getValue() === newValue && newValue.length === this.#length) this.#form.requestSubmit();
+			if (this.#form && this.options.autoSubmit && newValue.length === this.#length && newValue === this.getValue()) this.#form.requestSubmit();
 		}
 	};
 
