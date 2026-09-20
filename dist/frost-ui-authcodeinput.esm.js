@@ -139,6 +139,7 @@ var AuthCodeInput = class extends BaseComponent {
 		if (!chars.length) return false;
 		for (const [offset, char] of chars.entries()) $.setValue(this.#inputs[startIndex + offset], char);
 		this.#updateValue();
+		if (!this.node) return true;
 		const focusIndex = Math.min(startIndex + chars.length, this.#inputs.length - 1);
 		$.focus(this.#inputs[focusIndex]);
 		return true;
@@ -180,7 +181,7 @@ var AuthCodeInput = class extends BaseComponent {
 				$.setValue(target, value);
 			}
 			this.#updateValue();
-			if (!value) return;
+			if (!this.node || !value) return;
 			if (targetIndex < this.#inputs.length - 1) $.focus(this.#inputs[targetIndex + 1]);
 		});
 		$.addEventDelegate(this.#container, "paste.ui.authcodeinput", "input", (e) => {
@@ -214,7 +215,7 @@ var AuthCodeInput = class extends BaseComponent {
 						const previousInput = this.#inputs[targetIndex - 1];
 						$.setValue(previousInput, "");
 						this.#updateValue();
-						$.focus(previousInput);
+						if (this.node) $.focus(previousInput);
 					}
 					break;
 				default: if (e.key.length !== 1 || e.key.match(this.#regExp)) return;
@@ -308,10 +309,8 @@ var AuthCodeInput = class extends BaseComponent {
 		$.setValue(this.node, newValue);
 		if (!notify) return;
 		$.triggerEvent(this.node, "change.ui.authcodeinput");
-		if (this.options.autoSubmit && newValue.length === this.#length) {
-			const form = $.closest(this.node, "form").shift();
-			if (form) form.requestSubmit();
-		}
+		if (!this.node) return;
+		if (this.#form && this.options.autoSubmit && newValue.length === this.#length) this.#form.requestSubmit();
 	}
 };
 

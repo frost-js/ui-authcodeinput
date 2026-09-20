@@ -171,6 +171,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			if (!chars.length) return false;
 			for (const [offset, char] of chars.entries()) _fr0st_query.default.setValue(this.#inputs[startIndex + offset], char);
 			this.#updateValue();
+			if (!this.node) return true;
 			const focusIndex = Math.min(startIndex + chars.length, this.#inputs.length - 1);
 			_fr0st_query.default.focus(this.#inputs[focusIndex]);
 			return true;
@@ -212,7 +213,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 					_fr0st_query.default.setValue(target, value);
 				}
 				this.#updateValue();
-				if (!value) return;
+				if (!this.node || !value) return;
 				if (targetIndex < this.#inputs.length - 1) _fr0st_query.default.focus(this.#inputs[targetIndex + 1]);
 			});
 			_fr0st_query.default.addEventDelegate(this.#container, "paste.ui.authcodeinput", "input", (e) => {
@@ -246,7 +247,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 							const previousInput = this.#inputs[targetIndex - 1];
 							_fr0st_query.default.setValue(previousInput, "");
 							this.#updateValue();
-							_fr0st_query.default.focus(previousInput);
+							if (this.node) _fr0st_query.default.focus(previousInput);
 						}
 						break;
 					default: if (e.key.length !== 1 || e.key.match(this.#regExp)) return;
@@ -340,10 +341,8 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			_fr0st_query.default.setValue(this.node, newValue);
 			if (!notify) return;
 			_fr0st_query.default.triggerEvent(this.node, "change.ui.authcodeinput");
-			if (this.options.autoSubmit && newValue.length === this.#length) {
-				const form = _fr0st_query.default.closest(this.node, "form").shift();
-				if (form) form.requestSubmit();
-			}
+			if (!this.node) return;
+			if (this.#form && this.options.autoSubmit && newValue.length === this.#length) this.#form.requestSubmit();
 		}
 	};
 

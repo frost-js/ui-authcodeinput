@@ -167,6 +167,10 @@ export default class AuthCodeInput extends BaseComponent {
 
         this.#updateValue();
 
+        if (!this.node) {
+            return true;
+        }
+
         const focusIndex = Math.min(
             startIndex + chars.length,
             this.#inputs.length - 1,
@@ -228,7 +232,7 @@ export default class AuthCodeInput extends BaseComponent {
 
             this.#updateValue();
 
-            if (!value) {
+            if (!this.node || !value) {
                 return;
             }
 
@@ -293,7 +297,10 @@ export default class AuthCodeInput extends BaseComponent {
                         const previousInput = this.#inputs[targetIndex - 1];
                         $.setValue(previousInput, '');
                         this.#updateValue();
-                        $.focus(previousInput);
+
+                        if (this.node) {
+                            $.focus(previousInput);
+                        }
                     }
                     break;
                 default:
@@ -452,12 +459,16 @@ export default class AuthCodeInput extends BaseComponent {
 
         $.triggerEvent(this.node, 'change.ui.authcodeinput');
 
-        if (this.options.autoSubmit && newValue.length === this.#length) {
-            const form = $.closest(this.node, 'form').shift();
+        if (!this.node) {
+            return;
+        }
 
-            if (form) {
-                form.requestSubmit();
-            }
+        if (
+            this.#form &&
+            this.options.autoSubmit &&
+            newValue.length === this.#length
+        ) {
+            this.#form.requestSubmit();
         }
     }
 }
