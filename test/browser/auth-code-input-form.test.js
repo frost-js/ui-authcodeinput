@@ -205,48 +205,4 @@ test.describe('AuthCodeInput forms', () => {
             }
         });
     });
-
-    test.describe('disposal in a change listener', () => {
-        for (const { name, initial, action, expected } of [
-            { name: 'typing', initial: '12', action: (inputs) => inputs.last().press('3'), expected: '123' },
-            { name: 'backspace on a filled input', initial: '123', action: (inputs) => inputs.last().press('Backspace'), expected: '12' },
-            { name: 'backspace on an empty input', initial: '12', action: (inputs) => inputs.last().press('Backspace'), expected: '1' },
-            {
-                name: 'autofill', initial: '', expected: '123',
-                action: (inputs) => inputs.first().evaluate((input) => {
-                    input.value = '123';
-                    input.dispatchEvent(new Event('input', { bubbles: true }));
-                }),
-            },
-            {
-                name: 'paste', initial: '', expected: '123',
-                action: (inputs) => inputs.first().evaluate((input) => {
-                    const clipboardData = new DataTransfer();
-                    clipboardData.setData('text', '123');
-                    input.dispatchEvent(new ClipboardEvent('paste', {
-                        bubbles: true,
-                        cancelable: true,
-                        clipboardData,
-                    }));
-                }),
-            },
-        ]) {
-            test(`can dispose during ${name}`, async ({ page }) => {
-                const errors = [];
-                page.on('pageerror', (error) => errors.push(error.message));
-                await page.evaluate((initial) => {
-                    const auth = document.querySelector('#auth');
-                    auth.value = initial;
-                    const instance = UI.AuthCodeInput.init(auth, { autoSubmit: true, length: 3 });
-                    $.addEvent(auth, 'change.ui.authcodeinput', () => instance.dispose());
-                }, initial);
-                await action(page.locator('.d-flex input'));
-
-                await expect(page.locator('.d-flex')).toHaveCount(0);
-                await expect(page.locator('#auth')).toHaveValue(expected);
-                expect(await page.evaluate((_) => window.authCodeInputEvents)).toEqual({ changes: 1, submits: 0 });
-                expect(errors).toEqual([]);
-            });
-        }
-    });
 });
