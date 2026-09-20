@@ -397,7 +397,7 @@ test.describe('AuthCodeInput', () => {
         });
     });
 
-    test.describe('events', () => {
+    test.describe('change event', () => {
         test('triggers a change event when the value changes', async ({ page }) => {
             expect(await page.evaluate((_) => {
                 const auth = document.querySelector('#auth');
@@ -451,294 +451,302 @@ test.describe('AuthCodeInput', () => {
             });
         });
 
-        test('accepts valid input and advances focus', async ({ page }) => {
-            const inputs = page.locator('.d-flex input');
-            await inputs.first().press('1');
+        test.describe('typing and validation', () => {
+            test('accepts valid input and advances focus', async ({ page }) => {
+                const inputs = page.locator('.d-flex input');
+                await inputs.first().press('1');
 
-            await expect(page.locator('#auth')).toHaveValue('1');
-            await expect(inputs.first()).toHaveValue('1');
-            await expect(inputs.nth(1)).toBeFocused();
+                await expect(page.locator('#auth')).toHaveValue('1');
+                await expect(inputs.first()).toHaveValue('1');
+                await expect(inputs.nth(1)).toBeFocused();
 
-            await inputs.nth(1).press('2');
-            await expect(page.locator('#auth')).toHaveValue('12');
-            await expect(inputs.nth(2)).toBeFocused();
+                await inputs.nth(1).press('2');
+                await expect(page.locator('#auth')).toHaveValue('12');
+                await expect(inputs.nth(2)).toBeFocused();
+            });
+
+            test('rejects invalid input', async ({ page }) => {
+                const input = page.locator('.d-flex input').first();
+                await input.press('A');
+
+                await expect(page.locator('#auth')).toHaveValue('');
+                await expect(input).toHaveValue('');
+                await expect(input).toBeFocused();
+            });
         });
 
-        test('rejects invalid input', async ({ page }) => {
-            const input = page.locator('.d-flex input').first();
-            await input.press('A');
+        test.describe('paste and autofill', () => {
+            test('distributes pasted input', async ({ page }) => {
+                const allowed = await page.evaluate((_) => {
+                    const auth = document.querySelector('#auth');
+                    const inputs = $.find('input', $.prev(auth).shift());
+                    const event = new ClipboardEvent('paste', {
+                        bubbles: true,
+                        cancelable: true,
+                    });
+                    Object.defineProperty(event, 'clipboardData', {
+                        value: { getData: (_) => '12-3 456' },
+                    });
 
-            await expect(page.locator('#auth')).toHaveValue('');
-            await expect(input).toHaveValue('');
-            await expect(input).toBeFocused();
-        });
-
-        for (const modifier of ['ctrlKey', 'metaKey']) {
-            for (const key of ['a', 'c', 'v', 'x']) {
-                test(`allows ${modifier} + ${key}`, async ({ page }) => {
-                    const prevented = await page.locator('.d-flex input').first().evaluate((input, { modifier, key }) => {
-                        const event = new KeyboardEvent('keydown', {
-                            bubbles: true,
-                            cancelable: true,
-                            key,
-                            code: `Key${key.toUpperCase()}`,
-                            [modifier]: true,
-                        });
-                        input.dispatchEvent(event);
-                        return event.defaultPrevented;
-                    }, { modifier, key });
-
-                    expect(prevented).toBe(false);
+                    return inputs[0].dispatchEvent(event);
                 });
+
+                expect(allowed).toBe(false);
+                await expect(page.locator('#auth')).toHaveValue('123456');
+                const inputs = page.locator('.d-flex input');
+                const values = ['1', '2', '3', '4', '5', '6'];
+                await expect(inputs).toHaveCount(values.length);
+                for (const [index, value] of values.entries()) {
+                    await expect(inputs.nth(index)).toHaveValue(value);
+                }
+                await expect(inputs.last()).toBeFocused();
+            });
+
+            test('distributes pasted input from the active input', async ({ page }) => {
+                await page.evaluate((_) => {
+                    const authCodeInput = $.getData('#auth', 'authcodeinput');
+                    authCodeInput.setValue('12');
+                    const inputs = $.find('input', $.prev('#auth').shift());
+                    const event = new ClipboardEvent('paste', {
+                        bubbles: true,
+                        cancelable: true,
+                    });
+                    Object.defineProperty(event, 'clipboardData', {
+                        value: { getData: (_) => '34-56' },
+                    });
+                    inputs[2].dispatchEvent(event);
+                });
+
+                await expect(page.locator('#auth')).toHaveValue('123456');
+            });
+
+            test('ignores pasted input without valid characters', async ({ page }) => {
+                await page.evaluate((_) => {
+                    const authCodeInput = $.getData('#auth', 'authcodeinput');
+                    authCodeInput.setValue('12');
+                    const input = $.findOne('input', $.prev('#auth').shift());
+                    const event = new ClipboardEvent('paste', {
+                        bubbles: true,
+                        cancelable: true,
+                    });
+                    Object.defineProperty(event, 'clipboardData', {
+                        value: { getData: (_) => 'abc' },
+                    });
+                    input.dispatchEvent(event);
+                });
+
+                await expect(page.locator('#auth')).toHaveValue('12');
+            });
+
+            test('distributes multi-character autofill input', async ({ page }) => {
+                await page.evaluate((_) => {
+                    const auth = document.querySelector('#auth');
+                    const inputs = $.find('input', $.prev(auth).shift());
+                    $.setValue(inputs[0], '65a4-321');
+                    $.triggerEvent(inputs[0], 'input');
+                });
+
+                await expect(page.locator('#auth')).toHaveValue('654321');
+                const inputs = page.locator('.d-flex input');
+                const values = ['6', '5', '4', '3', '2', '1'];
+                await expect(inputs).toHaveCount(values.length);
+                for (const [index, value] of values.entries()) {
+                    await expect(inputs.nth(index)).toHaveValue(value);
+                }
+                await expect(inputs.last()).toBeFocused();
+            });
+
+            test('clears multi-character input without valid characters', async ({ page }) => {
+                await page.evaluate((_) => {
+                    const input = $.findOne('input', $.prev('#auth').shift());
+                    $.setValue(input, 'abc');
+                    $.triggerEvent(input, 'input');
+                });
+
+                await expect(page.locator('#auth')).toHaveValue('');
+                await expect(page.locator('.d-flex input').first()).toHaveValue('');
+            });
+        });
+
+        test.describe('keyboard', () => {
+            for (const modifier of ['ctrlKey', 'metaKey']) {
+                for (const key of ['a', 'c', 'v', 'x']) {
+                    test(`allows ${modifier} + ${key}`, async ({ page }) => {
+                        const prevented = await page.locator('.d-flex input').first().evaluate((input, { modifier, key }) => {
+                            const event = new KeyboardEvent('keydown', {
+                                bubbles: true,
+                                cancelable: true,
+                                key,
+                                code: `Key${key.toUpperCase()}`,
+                                [modifier]: true,
+                            });
+                            input.dispatchEvent(event);
+                            return event.defaultPrevented;
+                        }, { modifier, key });
+
+                        expect(prevented).toBe(false);
+                    });
+                }
             }
-        }
 
-        test('supports keyboard select-all, copy, cut and paste', async ({ page, browserName }) => {
-            test.skip(browserName !== 'chromium', 'Clipboard permissions are configured for Chromium.');
-            await page.evaluate((_) => $.getData('#auth', 'authcodeinput').setValue('1'));
-            const input = page.locator('.d-flex input').first();
-            await input.focus();
-            // Remove the selection made by focusin so select-all must select the digit.
-            await input.evaluate((input) => input.setSelectionRange(1, 1));
-            await input.press('ControlOrMeta+a');
-            expect(await input.evaluate((input) => [input.selectionStart, input.selectionEnd])).toEqual([0, 1]);
-            await input.press('ControlOrMeta+c');
-            expect(await page.evaluate((_) => navigator.clipboard.readText())).toBe('1');
-            await input.press('ControlOrMeta+x');
-            await expect(page.locator('#auth')).toHaveValue('');
-            await input.press('ControlOrMeta+v');
-            await expect(page.locator('#auth')).toHaveValue('1');
-            await expect(page.locator('.d-flex input').nth(1)).toBeFocused();
-        });
-
-        test('keeps focus on the last input', async ({ page }) => {
-            await page.evaluate((_) => {
-                $.getData('#auth', 'authcodeinput').setValue('12345');
+            test('supports keyboard select-all, copy, cut and paste', async ({ page, browserName }) => {
+                test.skip(browserName !== 'chromium', 'Clipboard permissions are configured for Chromium.');
+                await page.evaluate((_) => $.getData('#auth', 'authcodeinput').setValue('1'));
+                const input = page.locator('.d-flex input').first();
+                await input.focus();
+                // Remove the selection made by focusin so select-all must select the digit.
+                await input.evaluate((input) => input.setSelectionRange(1, 1));
+                await input.press('ControlOrMeta+a');
+                expect(await input.evaluate((input) => [input.selectionStart, input.selectionEnd])).toEqual([0, 1]);
+                await input.press('ControlOrMeta+c');
+                expect(await page.evaluate((_) => navigator.clipboard.readText())).toBe('1');
+                await input.press('ControlOrMeta+x');
+                await expect(page.locator('#auth')).toHaveValue('');
+                await input.press('ControlOrMeta+v');
+                await expect(page.locator('#auth')).toHaveValue('1');
+                await expect(page.locator('.d-flex input').nth(1)).toBeFocused();
             });
-            const input = page.locator('.d-flex input').last();
-            await input.focus();
-            await input.press('6');
 
-            await expect(page.locator('#auth')).toHaveValue('123456');
-            await expect(input).toBeFocused();
-        });
-
-        test('distributes pasted input', async ({ page }) => {
-            const allowed = await page.evaluate((_) => {
-                const auth = document.querySelector('#auth');
-                const inputs = $.find('input', $.prev(auth).shift());
-                const event = new ClipboardEvent('paste', {
-                    bubbles: true,
-                    cancelable: true,
+            test('handles backspace from filled and empty inputs', async ({ page }) => {
+                await page.evaluate((_) => {
+                    $.getData('#auth', 'authcodeinput').setValue('123');
                 });
-                Object.defineProperty(event, 'clipboardData', {
-                    value: { getData: (_) => '12-3 456' },
+                const inputs = page.locator('.d-flex input');
+                await inputs.nth(2).focus();
+                await inputs.nth(2).press('Backspace');
+
+                await expect(page.locator('#auth')).toHaveValue('12');
+                await expect(inputs.nth(2)).toHaveValue('');
+
+                await inputs.nth(2).press('Backspace');
+
+                await expect(page.locator('#auth')).toHaveValue('1');
+                await expect(inputs.nth(1)).toHaveValue('');
+                await expect(inputs.nth(1)).toBeFocused();
+            });
+
+            test('keeps backspace on the first empty input', async ({ page }) => {
+                const input = page.locator('.d-flex input').first();
+                await input.focus();
+                await input.press('Backspace');
+
+                await expect(page.locator('#auth')).toHaveValue('');
+                await expect(input).toBeFocused();
+            });
+
+            test('navigates with arrow keys', async ({ page }) => {
+                await page.evaluate((_) => {
+                    $.getData('#auth', 'authcodeinput').setValue('123456');
+                });
+                const inputs = page.locator('.d-flex input');
+                await inputs.nth(2).focus();
+                await inputs.nth(2).press('ArrowLeft');
+                await expect(inputs.nth(1)).toBeFocused();
+
+                await inputs.nth(1).press('ArrowRight');
+                await expect(inputs.nth(2)).toBeFocused();
+            });
+
+            test('keeps arrow keys within the input boundaries', async ({ page }) => {
+                await page.evaluate((_) => {
+                    $.getData('#auth', 'authcodeinput').setValue('123456');
+                });
+                const inputs = page.locator('.d-flex input');
+                await inputs.first().focus();
+                await inputs.first().press('ArrowLeft');
+                await expect(inputs.first()).toBeFocused();
+
+                await inputs.last().focus();
+                await inputs.last().press('ArrowRight');
+                await expect(inputs.last()).toBeFocused();
+            });
+
+            test('uses physical arrow directions in RTL', async ({ page }) => {
+                await page.evaluate((_) => {
+                    const auth = document.querySelector('#auth');
+                    $.setAttribute(auth, { dir: 'rtl' });
+                    $.getData(auth, 'authcodeinput').dispose();
+                    UI.AuthCodeInput.init(auth).setValue('123456');
                 });
 
-                return inputs[0].dispatchEvent(event);
-            });
+                const container = page.locator('.d-flex');
+                const inputs = container.locator('input');
+                await expect(container).toHaveAttribute('dir', 'rtl');
+                await inputs.nth(2).focus();
+                await inputs.nth(2).press('ArrowLeft');
+                await expect(inputs.nth(3)).toBeFocused();
 
-            expect(allowed).toBe(false);
-            await expect(page.locator('#auth')).toHaveValue('123456');
-            const inputs = page.locator('.d-flex input');
-            const values = ['1', '2', '3', '4', '5', '6'];
-            await expect(inputs).toHaveCount(values.length);
-            for (const [index, value] of values.entries()) {
-                await expect(inputs.nth(index)).toHaveValue(value);
-            }
-            await expect(inputs.last()).toBeFocused();
+                await inputs.nth(3).press('ArrowRight');
+                await expect(inputs.nth(2)).toBeFocused();
+
+                await inputs.first().focus();
+                await inputs.first().press('ArrowRight');
+                await expect(inputs.first()).toBeFocused();
+
+                expect(await inputs.evaluateAll((inputs) => {
+                    const lefts = inputs.map((input) => input.getBoundingClientRect().left);
+                    return lefts.every((left, index) => index === 0 || lefts[index - 1] > left);
+                })).toBe(true);
+            });
         });
 
-        test('distributes pasted input from the active input', async ({ page }) => {
-            await page.evaluate((_) => {
-                const authCodeInput = $.getData('#auth', 'authcodeinput');
-                authCodeInput.setValue('12');
-                const inputs = $.find('input', $.prev('#auth').shift());
-                const event = new ClipboardEvent('paste', {
-                    bubbles: true,
-                    cancelable: true,
+        test.describe('focus and tab order', () => {
+            test('keeps focus on the last input', async ({ page }) => {
+                await page.evaluate((_) => {
+                    $.getData('#auth', 'authcodeinput').setValue('12345');
                 });
-                Object.defineProperty(event, 'clipboardData', {
-                    value: { getData: (_) => '34-56' },
+                const input = page.locator('.d-flex input').last();
+                await input.focus();
+                await input.press('6');
+
+                await expect(page.locator('#auth')).toHaveValue('123456');
+                await expect(input).toBeFocused();
+            });
+
+            test('redirects focus to the next incomplete input', async ({ page }) => {
+                await page.evaluate((_) => {
+                    $.getData('#auth', 'authcodeinput').setValue('12');
                 });
-                inputs[2].dispatchEvent(event);
+                const inputs = page.locator('.d-flex input');
+                await inputs.last().focus();
+
+                await expect(inputs.nth(2)).toBeFocused();
             });
 
-            await expect(page.locator('#auth')).toHaveValue('123456');
-        });
-
-        test('ignores pasted input without valid characters', async ({ page }) => {
-            await page.evaluate((_) => {
-                const authCodeInput = $.getData('#auth', 'authcodeinput');
-                authCodeInput.setValue('12');
-                const input = $.findOne('input', $.prev('#auth').shift());
-                const event = new ClipboardEvent('paste', {
-                    bubbles: true,
-                    cancelable: true,
+            test('redirects original input focus to a visible input', async ({ page }) => {
+                await page.evaluate((_) => {
+                    const authCodeInput = $.getData('#auth', 'authcodeinput');
+                    authCodeInput.setValue('12');
+                    $.focus('#auth');
                 });
-                Object.defineProperty(event, 'clipboardData', {
-                    value: { getData: (_) => 'abc' },
+                const inputs = page.locator('.d-flex input');
+                await expect(inputs.nth(2)).toBeFocused();
+
+                await page.evaluate((_) => {
+                    const authCodeInput = $.getData('#auth', 'authcodeinput');
+                    authCodeInput.setValue('123456');
+                    $.focus('#auth');
                 });
-                input.dispatchEvent(event);
+                await expect(inputs.first()).toBeFocused();
             });
 
-            await expect(page.locator('#auth')).toHaveValue('12');
-        });
+            test('updates the tab order', async ({ page }) => {
+                const inputs = page.locator('.d-flex input');
+                await expect(inputs).toHaveCount(6);
+                await expect(inputs.first()).not.toHaveAttribute('tabindex');
+                await expect(page.locator('.d-flex input[tabindex="-1"]')).toHaveCount(5);
 
-        test('distributes multi-character autofill input', async ({ page }) => {
-            await page.evaluate((_) => {
-                const auth = document.querySelector('#auth');
-                const inputs = $.find('input', $.prev(auth).shift());
-                $.setValue(inputs[0], '65a4-321');
-                $.triggerEvent(inputs[0], 'input');
+                await page.evaluate((_) => {
+                    $.getData('#auth', 'authcodeinput').setValue('12');
+                });
+                await expect(inputs.nth(2)).not.toHaveAttribute('tabindex');
+                await expect(page.locator('.d-flex input[tabindex="-1"]')).toHaveCount(3);
+
+                await page.evaluate((_) => {
+                    $.getData('#auth', 'authcodeinput').setValue('123456');
+                });
+                await expect(page.locator('.d-flex input[tabindex]')).toHaveCount(0);
             });
-
-            await expect(page.locator('#auth')).toHaveValue('654321');
-            const inputs = page.locator('.d-flex input');
-            const values = ['6', '5', '4', '3', '2', '1'];
-            await expect(inputs).toHaveCount(values.length);
-            for (const [index, value] of values.entries()) {
-                await expect(inputs.nth(index)).toHaveValue(value);
-            }
-            await expect(inputs.last()).toBeFocused();
-        });
-
-        test('clears multi-character input without valid characters', async ({ page }) => {
-            await page.evaluate((_) => {
-                const input = $.findOne('input', $.prev('#auth').shift());
-                $.setValue(input, 'abc');
-                $.triggerEvent(input, 'input');
-            });
-
-            await expect(page.locator('#auth')).toHaveValue('');
-            await expect(page.locator('.d-flex input').first()).toHaveValue('');
-        });
-
-        test('handles backspace from filled and empty inputs', async ({ page }) => {
-            await page.evaluate((_) => {
-                $.getData('#auth', 'authcodeinput').setValue('123');
-            });
-            const inputs = page.locator('.d-flex input');
-            await inputs.nth(2).focus();
-            await inputs.nth(2).press('Backspace');
-
-            await expect(page.locator('#auth')).toHaveValue('12');
-            await expect(inputs.nth(2)).toHaveValue('');
-
-            await inputs.nth(2).press('Backspace');
-
-            await expect(page.locator('#auth')).toHaveValue('1');
-            await expect(inputs.nth(1)).toHaveValue('');
-            await expect(inputs.nth(1)).toBeFocused();
-        });
-
-        test('keeps backspace on the first empty input', async ({ page }) => {
-            const input = page.locator('.d-flex input').first();
-            await input.focus();
-            await input.press('Backspace');
-
-            await expect(page.locator('#auth')).toHaveValue('');
-            await expect(input).toBeFocused();
-        });
-
-        test('navigates with arrow keys', async ({ page }) => {
-            await page.evaluate((_) => {
-                $.getData('#auth', 'authcodeinput').setValue('123456');
-            });
-            const inputs = page.locator('.d-flex input');
-            await inputs.nth(2).focus();
-            await inputs.nth(2).press('ArrowLeft');
-            await expect(inputs.nth(1)).toBeFocused();
-
-            await inputs.nth(1).press('ArrowRight');
-            await expect(inputs.nth(2)).toBeFocused();
-        });
-
-        test('keeps arrow keys within the input boundaries', async ({ page }) => {
-            await page.evaluate((_) => {
-                $.getData('#auth', 'authcodeinput').setValue('123456');
-            });
-            const inputs = page.locator('.d-flex input');
-            await inputs.first().focus();
-            await inputs.first().press('ArrowLeft');
-            await expect(inputs.first()).toBeFocused();
-
-            await inputs.last().focus();
-            await inputs.last().press('ArrowRight');
-            await expect(inputs.last()).toBeFocused();
-        });
-
-        test('uses physical arrow directions in RTL', async ({ page }) => {
-            await page.evaluate((_) => {
-                const auth = document.querySelector('#auth');
-                $.setAttribute(auth, { dir: 'rtl' });
-                $.getData(auth, 'authcodeinput').dispose();
-                UI.AuthCodeInput.init(auth).setValue('123456');
-            });
-
-            const container = page.locator('.d-flex');
-            const inputs = container.locator('input');
-            await expect(container).toHaveAttribute('dir', 'rtl');
-            await inputs.nth(2).focus();
-            await inputs.nth(2).press('ArrowLeft');
-            await expect(inputs.nth(3)).toBeFocused();
-
-            await inputs.nth(3).press('ArrowRight');
-            await expect(inputs.nth(2)).toBeFocused();
-
-            await inputs.first().focus();
-            await inputs.first().press('ArrowRight');
-            await expect(inputs.first()).toBeFocused();
-
-            expect(await inputs.evaluateAll((inputs) => {
-                const lefts = inputs.map((input) => input.getBoundingClientRect().left);
-                return lefts.every((left, index) => index === 0 || lefts[index - 1] > left);
-            })).toBe(true);
-        });
-
-        test('redirects focus to the next incomplete input', async ({ page }) => {
-            await page.evaluate((_) => {
-                $.getData('#auth', 'authcodeinput').setValue('12');
-            });
-            const inputs = page.locator('.d-flex input');
-            await inputs.last().focus();
-
-            await expect(inputs.nth(2)).toBeFocused();
-        });
-
-        test('redirects original input focus to a visible input', async ({ page }) => {
-            await page.evaluate((_) => {
-                const authCodeInput = $.getData('#auth', 'authcodeinput');
-                authCodeInput.setValue('12');
-                $.focus('#auth');
-            });
-            const inputs = page.locator('.d-flex input');
-            await expect(inputs.nth(2)).toBeFocused();
-
-            await page.evaluate((_) => {
-                const authCodeInput = $.getData('#auth', 'authcodeinput');
-                authCodeInput.setValue('123456');
-                $.focus('#auth');
-            });
-            await expect(inputs.first()).toBeFocused();
-        });
-
-        test('updates the tab order', async ({ page }) => {
-            const inputs = page.locator('.d-flex input');
-            await expect(inputs).toHaveCount(6);
-            await expect(inputs.first()).not.toHaveAttribute('tabindex');
-            await expect(page.locator('.d-flex input[tabindex="-1"]')).toHaveCount(5);
-
-            await page.evaluate((_) => {
-                $.getData('#auth', 'authcodeinput').setValue('12');
-            });
-            await expect(inputs.nth(2)).not.toHaveAttribute('tabindex');
-            await expect(page.locator('.d-flex input[tabindex="-1"]')).toHaveCount(3);
-
-            await page.evaluate((_) => {
-                $.getData('#auth', 'authcodeinput').setValue('123456');
-            });
-            await expect(page.locator('.d-flex input[tabindex]')).toHaveCount(0);
         });
     });
 
