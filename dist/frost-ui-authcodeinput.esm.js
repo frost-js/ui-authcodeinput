@@ -43,10 +43,12 @@ var AuthCodeInput = class extends BaseComponent {
 		getAriaLabel: (i) => `Character ${i}`
 	};
 	#container;
+	#form;
 	#hidden;
 	#inputs;
 	#length;
 	#regExp;
+	#resetHandler;
 	#segments;
 	#tabIndex;
 	/**
@@ -56,6 +58,7 @@ var AuthCodeInput = class extends BaseComponent {
 	*/
 	constructor(node, options) {
 		super(node, options);
+		this.#form = this.node.form;
 		this.#segments = $._wrap(this.options.length).map((length) => Number.parseInt(length, 10));
 		this.#length = this.#segments.reduce((total, length) => total + length, 0);
 		const maxLength = Number.parseInt($.getAttribute(this.node, "maxlength"), 10);
@@ -87,13 +90,19 @@ var AuthCodeInput = class extends BaseComponent {
 	dispose() {
 		$.remove(this.#container);
 		$.removeEvent(this.node, "focus.ui.authcodeinput");
+		if (this.#form) {
+			$.removeEvent(this.#form, "reset.ui.authcodeinput", this.#resetHandler);
+			this.#resetHandler.cancel();
+		}
 		if (this.#hidden) $.addClass(this.node, this.constructor.classes.hide);
 		else $.removeClass(this.node, this.constructor.classes.hide);
 		if (this.#tabIndex === null) $.removeAttribute(this.node, "tabindex");
 		else $.setAttribute(this.node, { tabindex: this.#tabIndex });
 		this.#container = null;
+		this.#form = null;
 		this.#inputs = null;
 		this.#regExp = null;
+		this.#resetHandler = null;
 		this.#segments = null;
 		super.dispose();
 	}
@@ -138,6 +147,12 @@ var AuthCodeInput = class extends BaseComponent {
 	* Attaches events for the AuthCodeInput.
 	*/
 	#events() {
+		if (this.#form) {
+			this.#resetHandler = $._debounce((event) => {
+				if (this.node && !event.defaultPrevented) this.#refresh();
+			});
+			$.addEvent(this.#form, "reset.ui.authcodeinput", this.#resetHandler);
+		}
 		$.addEvent(this.node, "focus.ui.authcodeinput", (_) => {
 			const nextInput = this.#inputs.find((input) => !$.getValue(input));
 			$.focus(nextInput || this.#inputs[0]);

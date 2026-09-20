@@ -33,10 +33,12 @@ export default class AuthCodeInput extends BaseComponent {
     };
 
     #container;
+    #form;
     #hidden;
     #inputs;
     #length;
     #regExp;
+    #resetHandler;
     #segments;
     #tabIndex;
 
@@ -47,6 +49,8 @@ export default class AuthCodeInput extends BaseComponent {
      */
     constructor(node, options) {
         super(node, options);
+
+        this.#form = this.node.form;
 
         this.#segments = $._wrap(this.options.length)
             .map((length) => Number.parseInt(length, 10));
@@ -91,6 +95,11 @@ export default class AuthCodeInput extends BaseComponent {
         $.remove(this.#container);
         $.removeEvent(this.node, 'focus.ui.authcodeinput');
 
+        if (this.#form) {
+            $.removeEvent(this.#form, 'reset.ui.authcodeinput', this.#resetHandler);
+            this.#resetHandler.cancel();
+        }
+
         if (this.#hidden) {
             $.addClass(this.node, this.constructor.classes.hide);
         } else {
@@ -104,8 +113,10 @@ export default class AuthCodeInput extends BaseComponent {
         }
 
         this.#container = null;
+        this.#form = null;
         this.#inputs = null;
         this.#regExp = null;
+        this.#resetHandler = null;
         this.#segments = null;
 
         super.dispose();
@@ -169,6 +180,16 @@ export default class AuthCodeInput extends BaseComponent {
      * Attaches events for the AuthCodeInput.
      */
     #events() {
+        if (this.#form) {
+            this.#resetHandler = $._debounce((event) => {
+                if (this.node && !event.defaultPrevented) {
+                    this.#refresh();
+                }
+            });
+
+            $.addEvent(this.#form, 'reset.ui.authcodeinput', this.#resetHandler);
+        }
+
         $.addEvent(this.node, 'focus.ui.authcodeinput', (_) => {
             const nextInput = this.#inputs.find((input) => !$.getValue(input));
             $.focus(nextInput || this.#inputs[0]);

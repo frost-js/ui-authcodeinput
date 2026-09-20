@@ -75,10 +75,12 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			getAriaLabel: (i) => `Character ${i}`
 		};
 		#container;
+		#form;
 		#hidden;
 		#inputs;
 		#length;
 		#regExp;
+		#resetHandler;
 		#segments;
 		#tabIndex;
 		/**
@@ -88,6 +90,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		*/
 		constructor(node, options) {
 			super(node, options);
+			this.#form = this.node.form;
 			this.#segments = _fr0st_query.default._wrap(this.options.length).map((length) => Number.parseInt(length, 10));
 			this.#length = this.#segments.reduce((total, length) => total + length, 0);
 			const maxLength = Number.parseInt(_fr0st_query.default.getAttribute(this.node, "maxlength"), 10);
@@ -119,13 +122,19 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		dispose() {
 			_fr0st_query.default.remove(this.#container);
 			_fr0st_query.default.removeEvent(this.node, "focus.ui.authcodeinput");
+			if (this.#form) {
+				_fr0st_query.default.removeEvent(this.#form, "reset.ui.authcodeinput", this.#resetHandler);
+				this.#resetHandler.cancel();
+			}
 			if (this.#hidden) _fr0st_query.default.addClass(this.node, this.constructor.classes.hide);
 			else _fr0st_query.default.removeClass(this.node, this.constructor.classes.hide);
 			if (this.#tabIndex === null) _fr0st_query.default.removeAttribute(this.node, "tabindex");
 			else _fr0st_query.default.setAttribute(this.node, { tabindex: this.#tabIndex });
 			this.#container = null;
+			this.#form = null;
 			this.#inputs = null;
 			this.#regExp = null;
+			this.#resetHandler = null;
 			this.#segments = null;
 			super.dispose();
 		}
@@ -170,6 +179,12 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		* Attaches events for the AuthCodeInput.
 		*/
 		#events() {
+			if (this.#form) {
+				this.#resetHandler = _fr0st_query.default._debounce((event) => {
+					if (this.node && !event.defaultPrevented) this.#refresh();
+				});
+				_fr0st_query.default.addEvent(this.#form, "reset.ui.authcodeinput", this.#resetHandler);
+			}
 			_fr0st_query.default.addEvent(this.node, "focus.ui.authcodeinput", (_) => {
 				const nextInput = this.#inputs.find((input) => !_fr0st_query.default.getValue(input));
 				_fr0st_query.default.focus(nextInput || this.#inputs[0]);
