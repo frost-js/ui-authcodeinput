@@ -216,6 +216,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				if (targetIndex < this.#inputs.length - 1) _fr0st_query.default.focus(this.#inputs[targetIndex + 1]);
 			});
 			_fr0st_query.default.addEventDelegate(this.#container, "paste.ui.authcodeinput", "input", (e) => {
+				if (this.node.readOnly) return;
 				e.preventDefault();
 				this.#distributeValue(e.clipboardData.getData("text"), this.#inputs.indexOf(e.currentTarget));
 			});
@@ -237,6 +238,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 						break;
 					}
 					case "Backspace":
+						if (this.node.readOnly) return;
 						if (_fr0st_query.default.getValue(target)) {
 							_fr0st_query.default.setValue(target, "");
 							this.#updateValue();
@@ -290,7 +292,8 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				"aria-describedby",
 				"aria-errormessage",
 				"aria-invalid",
-				"aria-required"
+				"aria-required",
+				"readonly"
 			].map((attribute) => [attribute, _fr0st_query.default.getAttribute(this.node, attribute)]).filter(([, value]) => value !== null));
 			let inputIndex = 0;
 			for (const [segmentIndex, length] of this.#segments.entries()) {

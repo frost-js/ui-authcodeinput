@@ -184,6 +184,7 @@ var AuthCodeInput = class extends BaseComponent {
 			if (targetIndex < this.#inputs.length - 1) $.focus(this.#inputs[targetIndex + 1]);
 		});
 		$.addEventDelegate(this.#container, "paste.ui.authcodeinput", "input", (e) => {
+			if (this.node.readOnly) return;
 			e.preventDefault();
 			this.#distributeValue(e.clipboardData.getData("text"), this.#inputs.indexOf(e.currentTarget));
 		});
@@ -205,6 +206,7 @@ var AuthCodeInput = class extends BaseComponent {
 					break;
 				}
 				case "Backspace":
+					if (this.node.readOnly) return;
 					if ($.getValue(target)) {
 						$.setValue(target, "");
 						this.#updateValue();
@@ -258,7 +260,8 @@ var AuthCodeInput = class extends BaseComponent {
 			"aria-describedby",
 			"aria-errormessage",
 			"aria-invalid",
-			"aria-required"
+			"aria-required",
+			"readonly"
 		].map((attribute) => [attribute, $.getAttribute(this.node, attribute)]).filter(([, value]) => value !== null));
 		let inputIndex = 0;
 		for (const [segmentIndex, length] of this.#segments.entries()) {

@@ -238,6 +238,10 @@ export default class AuthCodeInput extends BaseComponent {
         });
 
         $.addEventDelegate(this.#container, 'paste.ui.authcodeinput', 'input', (e) => {
+            if (this.node.readOnly) {
+                return;
+            }
+
             e.preventDefault();
 
             this.#distributeValue(
@@ -278,6 +282,10 @@ export default class AuthCodeInput extends BaseComponent {
                     break;
                 }
                 case 'Backspace':
+                    if (this.node.readOnly) {
+                        return;
+                    }
+
                     if ($.getValue(target)) {
                         $.setValue(target, '');
                         this.#updateValue();
@@ -357,6 +365,7 @@ export default class AuthCodeInput extends BaseComponent {
                 'aria-errormessage',
                 'aria-invalid',
                 'aria-required',
+                'readonly',
             ]
                 .map((attribute) => [
                     attribute,
