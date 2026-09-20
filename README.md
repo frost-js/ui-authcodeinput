@@ -15,6 +15,8 @@ Segmented authentication-code input for Frost UI with filtering, keyboard naviga
 - Numeric codes by default, with custom per-character regular expressions
 - Multi-character paste and one-time-code autofill distribution
 - Arrow-key navigation, backspace synchronization, focus redirection, and managed tab order
+- Native Ctrl/Cmd shortcuts and read-only input support
+- Silent programmatic updates and form-reset synchronization
 - Outline and filled Frost UI v4 input styles
 - System-aware light and dark themes with RTL behavior
 - Native `AuthCodeInput` class and `authcodeinput` fQuery plugin
@@ -96,6 +98,8 @@ Load Frost UI's all-in-one bundle before AuthCodeInput. The UI bundle supplies b
 
 The UMD bundle adds `AuthCodeInput` to the existing `globalThis.UI` object. It expects `globalThis.UI` and `globalThis.fQuery` to exist before it loads. If the non-bundled Frost UI build is used instead, load fQuery, Frost UI, and AuthCodeInput in that order.
 
+Do not load the separate fQuery script when using `frost-ui-bundle.js` or `frost-ui-bundle.min.js`.
+
 ## Usage
 
 Start with a normal input. AuthCodeInput inserts the visible character inputs before it and keeps the original input synchronized for form submission:
@@ -142,7 +146,7 @@ Resolved `instance.options` are frozen.
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `autoSubmit` | `boolean` | `false` | Submit the closest form when user input completes the code. |
+| `autoSubmit` | `boolean` | `false` | Submit the original input's associated form when user input completes the code. |
 | `getAriaLabel` | `(index: number) => string` | ``(index) => `Character ${index}` `` | Create the accessible label for each generated input. The index starts at `1`. |
 | `length` | `number \| number[]` | `[3, 3]` | Set the total character count or the character counts for divided segments. |
 | `regExp` | `string` | `'[0-9]'` | Regular-expression source used to accept or reject each character. |
@@ -234,7 +238,9 @@ $.addEvent(
 );
 ```
 
-The underlying native event type is `change`; fQuery exposes `event.namespace` as `ui.authcodeinput`. Re-entering the same value does not emit another event. Programmatic `setValue()` and `clear()` synchronize the control without emitting a change event.
+The underlying native event type is `change`; fQuery exposes `event.namespace` as `ui.authcodeinput`. Re-entering the same value does not emit another event. Initialization, programmatic `setValue()` and `clear()`, and form-reset synchronization do not emit a change event or automatically submit the form, including when values are filtered or truncated.
+
+Calling `dispose()` from a change listener is supported. The component stops further automatic submission and focus handling after that callback.
 
 ## fQuery API
 
@@ -266,6 +272,8 @@ Pass an options object to initialize every matched input, or pass a public metho
 - The first generated input uses `autocomplete="one-time-code"`; remaining inputs use `autocomplete="off"`.
 - `aria-describedby`, `aria-errormessage`, `aria-invalid`, and `aria-required` are copied from the original input.
 - Native `required` state is copied only when the original input is required.
+- At initialization, `readonly` is copied to the generated inputs. Read-only inputs remain selectable and support copying and navigation; typing, paste, and backspace cannot change their values. Programmatic `setValue()` and `clear()` still work.
+- Native Ctrl/Cmd keyboard shortcuts are preserved. Pasted characters still pass through the configured filter.
 - The original `inputmode` is preserved. Without one, the default `[0-9]` expression uses `numeric`; other expressions use `text`.
 - Focus is redirected to the next incomplete input, and unavailable future positions are removed from the tab order.
 - The original input remains the submitted form field and is visually hidden while the component is active.
@@ -275,7 +283,7 @@ Applications remain responsible for meaningful labels, instructions, error messa
 
 ## Form submission
 
-Set `autoSubmit: true` to call `requestSubmit()` on the closest form when user input or paste completes every generated field:
+Set `autoSubmit: true` to call `requestSubmit()` on the original input's associated form when user input or paste completes the code:
 
 ```js
 AuthCodeInput.init(document.querySelector('#verification-code'), {
@@ -284,7 +292,17 @@ AuthCodeInput.init(document.querySelector('#verification-code'), {
 });
 ```
 
-`requestSubmit()` follows the form's normal validation and submit-event path. Nothing is submitted when the input is outside a form. Programmatic `setValue()` updates the code without automatically submitting the form.
+`requestSubmit()` follows the form's normal validation and submit-event path. The associated form is taken from the original input's `form` property at initialization, including a form linked through the HTML `form` attribute. Nothing is submitted when the input has no associated form. Dispose and reinitialize the component if you change its form association.
+
+The change event runs before automatic submission. Submission proceeds only if the instance remains active and its value still matches the completed code after change listeners have run. A listener that clears the code, leaves a different value, or disposes the component prevents that automatic submission.
+
+Programmatic `setValue()` and `clear()` never automatically submit the form, even when filtering or truncation produces a complete code.
+
+## Form reset
+
+Calling the associated form's `reset()` method or activating a reset button restores the original input's default value. AuthCodeInput then filters and distributes that value across the generated inputs and updates their tab order.
+
+Synchronization is deferred until after the browser finishes resetting the form, so the generated inputs are updated asynchronously. It does not emit a change event or automatically submit the form. Canceled resets are ignored, and disposal removes the reset listener and prevents pending refreshes from running.
 
 ## Themes and RTL
 
@@ -308,13 +326,19 @@ In RTL layouts, the visual order reverses and Arrow Left/Arrow Right continue to
 
 ## Development
 
+Use Node.js matching `^20.19.0 || ^22.13.0 || >=24`. Install dependencies with `npm ci`, then install Playwright browsers with `npx playwright install --with-deps`.
+
 ```bash
 npm test
 npm run lint
 npm run build
 ```
 
-`npm test` builds the bundles and runs the Playwright suite in Chromium, Firefox, and WebKit.
+`npm test` rebuilds JavaScript, then runs the Playwright suite in Chromium, Firefox, and WebKit. `npm run test:browser` runs the suite against the existing bundles, so rebuild after changing source files.
+
+After building, `npm run test:coverage` runs Chromium tests and writes coverage reports to `coverage/`.
+
+`npm run test:headed` and `npm run test:ui` also use the existing bundles and open headed browsers or the Playwright UI.
 
 ## License
 
