@@ -121,10 +121,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		dispose() {
 			_fr0st_query.default.remove(this.#container);
 			_fr0st_query.default.removeEvent(this.node, "focus.ui.authcodeinput");
-			if (this.#form) {
-				_fr0st_query.default.removeEvent(this.#form, "reset.ui.authcodeinput", this.#resetHandler);
-				this.#resetHandler.cancel();
-			}
+			if (this.#form) _fr0st_query.default.removeEvent(this.#form, "reset.ui.authcodeinput", this.#resetHandler);
 			if (this.#hidden) _fr0st_query.default.addClass(this.node, this.constructor.classes.hide);
 			else _fr0st_query.default.removeClass(this.node, this.constructor.classes.hide);
 			if (this.#tabIndex === null) _fr0st_query.default.removeAttribute(this.node, "tabindex");
@@ -180,9 +177,11 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		*/
 		#events() {
 			if (this.#form) {
-				this.#resetHandler = _fr0st_query.default._debounce((event) => {
-					if (this.node && !event.defaultPrevented) this.#refresh();
-				});
+				this.#resetHandler = (event) => {
+					setTimeout(() => {
+						if (this.node && !event.defaultPrevented) this.#refresh();
+					}, 0);
+				};
 				_fr0st_query.default.addEvent(this.#form, "reset.ui.authcodeinput", this.#resetHandler);
 			}
 			_fr0st_query.default.addEvent(this.node, "focus.ui.authcodeinput", (_) => {
@@ -332,7 +331,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			if (!notify) return;
 			_fr0st_query.default.triggerEvent(this.node, "change.ui.authcodeinput");
 			if (!this.node) return;
-			if (this.#form && this.options.autoSubmit && newValue.length === this.#length) this.#form.requestSubmit();
+			if (this.#form && this.options.autoSubmit && this.getValue() === newValue && newValue.length === this.#length) this.#form.requestSubmit();
 		}
 	};
 

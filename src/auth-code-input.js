@@ -96,7 +96,6 @@ export default class AuthCodeInput extends BaseComponent {
 
         if (this.#form) {
             $.removeEvent(this.#form, 'reset.ui.authcodeinput', this.#resetHandler);
-            this.#resetHandler.cancel();
         }
 
         if (this.#hidden) {
@@ -184,11 +183,13 @@ export default class AuthCodeInput extends BaseComponent {
      */
     #events() {
         if (this.#form) {
-            this.#resetHandler = $._debounce((event) => {
-                if (this.node && !event.defaultPrevented) {
-                    this.#refresh();
-                }
-            });
+            this.#resetHandler = (event) => {
+                setTimeout(() => {
+                    if (this.node && !event.defaultPrevented) {
+                        this.#refresh();
+                    }
+                }, 0);
+            };
 
             $.addEvent(this.#form, 'reset.ui.authcodeinput', this.#resetHandler);
         }
@@ -454,6 +455,7 @@ export default class AuthCodeInput extends BaseComponent {
         if (
             this.#form &&
             this.options.autoSubmit &&
+            this.getValue() === newValue &&
             newValue.length === this.#length
         ) {
             this.#form.requestSubmit();

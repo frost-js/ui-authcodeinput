@@ -89,10 +89,7 @@ var AuthCodeInput = class extends BaseComponent {
 	dispose() {
 		$.remove(this.#container);
 		$.removeEvent(this.node, "focus.ui.authcodeinput");
-		if (this.#form) {
-			$.removeEvent(this.#form, "reset.ui.authcodeinput", this.#resetHandler);
-			this.#resetHandler.cancel();
-		}
+		if (this.#form) $.removeEvent(this.#form, "reset.ui.authcodeinput", this.#resetHandler);
 		if (this.#hidden) $.addClass(this.node, this.constructor.classes.hide);
 		else $.removeClass(this.node, this.constructor.classes.hide);
 		if (this.#tabIndex === null) $.removeAttribute(this.node, "tabindex");
@@ -148,9 +145,11 @@ var AuthCodeInput = class extends BaseComponent {
 	*/
 	#events() {
 		if (this.#form) {
-			this.#resetHandler = $._debounce((event) => {
-				if (this.node && !event.defaultPrevented) this.#refresh();
-			});
+			this.#resetHandler = (event) => {
+				setTimeout(() => {
+					if (this.node && !event.defaultPrevented) this.#refresh();
+				}, 0);
+			};
 			$.addEvent(this.#form, "reset.ui.authcodeinput", this.#resetHandler);
 		}
 		$.addEvent(this.node, "focus.ui.authcodeinput", (_) => {
@@ -300,7 +299,7 @@ var AuthCodeInput = class extends BaseComponent {
 		if (!notify) return;
 		$.triggerEvent(this.node, "change.ui.authcodeinput");
 		if (!this.node) return;
-		if (this.#form && this.options.autoSubmit && newValue.length === this.#length) this.#form.requestSubmit();
+		if (this.#form && this.options.autoSubmit && this.getValue() === newValue && newValue.length === this.#length) this.#form.requestSubmit();
 	}
 };
 
