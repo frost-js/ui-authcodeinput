@@ -58,19 +58,26 @@ var AuthCodeInput = class extends BaseComponent {
 	*/
 	constructor(node, options) {
 		super(node, options);
-		this.#form = this.node.form;
-		this.#segments = $._wrap(this.options.length).map((length) => Number.parseInt(length, 10));
-		this.#length = this.#segments.reduce((total, length) => total + length, 0);
-		const maxLength = Number.parseInt($.getAttribute(this.node, "maxlength"), 10);
-		if (Number.isInteger(maxLength) && maxLength >= 0 && this.#length > maxLength) {
-			this.#length = maxLength;
-			this.#segments = [maxLength];
+		try {
+			this.#form = this.node.form;
+			this.#hidden = $.hasClass(this.node, this.constructor.classes.hide);
+			this.#tabIndex = $.getAttribute(this.node, "tabindex");
+			this.#segments = $._wrap(this.options.length).map((length) => Number.parseInt(length, 10));
+			this.#length = this.#segments.reduce((total, length) => total + length, 0);
+			const maxLength = Number.parseInt($.getAttribute(this.node, "maxlength"), 10);
+			if (Number.isInteger(maxLength) && maxLength >= 0 && this.#length > maxLength) {
+				this.#length = maxLength;
+				this.#segments = [maxLength];
+			}
+			this.#regExp = new RegExp(this.options.regExp);
+			this.#render();
+			this.#events();
+			this.#refresh();
+			this.#refreshDisabled();
+		} catch (error) {
+			this.dispose();
+			throw error;
 		}
-		this.#regExp = new RegExp(this.options.regExp);
-		this.#render();
-		this.#events();
-		this.#refresh();
-		this.#refreshDisabled();
 	}
 	/**
 	* Clears the AuthCodeInput.
@@ -87,9 +94,10 @@ var AuthCodeInput = class extends BaseComponent {
 	}
 	/** @inheritdoc */
 	dispose() {
+		if (!this.node) return;
 		$.remove(this.#container);
 		$.removeEvent(this.node, "focus.ui.authcodeinput");
-		if (this.#form) $.removeEvent(this.#form, "reset.ui.authcodeinput", this.#resetHandler);
+		if (this.#form && this.#resetHandler) $.removeEvent(this.#form, "reset.ui.authcodeinput", this.#resetHandler);
 		if (this.#hidden) $.addClass(this.node, this.constructor.classes.hide);
 		else $.removeClass(this.node, this.constructor.classes.hide);
 		if (this.#tabIndex === null) $.removeAttribute(this.node, "tabindex");
@@ -237,8 +245,6 @@ var AuthCodeInput = class extends BaseComponent {
 	* Renders the AuthCodeInput.
 	*/
 	#render() {
-		this.#hidden = $.hasClass(this.node, this.constructor.classes.hide);
-		this.#tabIndex = $.getAttribute(this.node, "tabindex");
 		const containerOptions = { class: this.constructor.classes.container };
 		const direction = $.getAttribute(this.node, "dir");
 		if (direction) containerOptions.attributes = { dir: direction };
