@@ -4,13 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Frost UI AuthCodeInput Demo</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fr0st/ui@latest/dist/frost-ui.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fr0st/ui@4/dist/frost-ui.min.css">
     <link rel="stylesheet" href="assets/demo.css">
-    <script src="https://cdn.jsdelivr.net/npm/@fr0st/ui@latest/dist/frost-ui-bundle.min.js"></script>
-    <script src="../dist/frost-ui-authcodeinput.js"></script>
-    <script src="assets/demo.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@fr0st/ui@4/dist/frost-ui-bundle.min.js" defer></script>
+    <script src="../dist/frost-ui-authcodeinput.js" defer></script>
+    <script src="assets/demo.js" defer></script>
 </head>
 
 <body>
@@ -36,7 +35,7 @@
             <div class="row g-0 align-items-stretch">
                 <div class="col-lg-7 d-flex align-items-center bg-ambient">
                     <div class="p-4 p-md-5">
-                        <span class="badge bg-primary-subtle text-primary-subtle mb-3">Frost UI v4 component</span>
+                        <span class="badge bg-primary-subtle text-primary-subtle mb-3">Frost UI component</span>
                         <h1 class="display-2 mb-4">Verification codes with <span class="text-gradient">less friction.</span></h1>
                         <p class="lead text-body-secondary mb-4">Try segmented layouts, custom character rules, keyboard navigation, paste distribution, one-time-code autofill, and automatic form submission.</p>
                         <nav class="d-flex flex-wrap gap-2" aria-label="Demo sections">
@@ -242,9 +241,10 @@
                             <strong>Event log</strong>
                             <code>change.ui.authcodeinput</code>
                         </div>
-                        <div class="card-body demo-event-log overflow-y-auto" id="event-log" role="log" aria-live="polite">
+                        <div class="card-body demo-event-log" id="event-log" role="log" aria-label="AuthCodeInput events" aria-live="polite" aria-relevant="additions">
                             <p class="small text-body-secondary mb-0">Interact with the input to log value changes.</p>
                         </div>
+                        <button class="btn btn-outline-secondary btn-sm ripple mt-3" id="clear-log" type="button">Clear log</button>
                     </div>
                 </div>
             </div>
@@ -341,84 +341,6 @@
             <a href="https://github.com/frost-js/ui-authcodeinput">View the repository</a>
         </div>
     </footer>
-
-    <script>
-        $('[data-ui-toggle="authcodeinput"]').authcodeinput();
-
-        $.addEvent('#methods-code', 'change.ui.authcodeinput', (event) => {
-            const entry = $.create('div', {
-                class: 'small font-monospace py-2 border-bottom',
-            });
-
-            $.setText(entry, `change.ui.authcodeinput — value: "${event.currentTarget.value}"`);
-            $.append('#event-log', entry);
-            $.setScrollY('#event-log', $.height('#event-log', { boxSize: $.SCROLL_BOX }));
-        });
-
-        $('[data-demo-method]').addEvent('click', (event) => {
-            const method = $.getDataset(event.currentTarget, 'demoMethod');
-            const instance = method === 'dispose' ?
-                $.getData('#methods-code', 'authcodeinput') :
-                UI.AuthCodeInput.init($.findOne('#methods-code'));
-
-            switch (method) {
-                case 'init':
-                    $.setText('#method-output', 'Initialized.');
-                    break;
-                case 'dispose':
-                    if (instance) {
-                        instance.dispose();
-                        $.setText('#method-output', 'Disposed; the original input is restored.');
-                    } else {
-                        $.setText('#method-output', 'Already disposed.');
-                    }
-                    break;
-                case 'enable':
-                    instance.enable();
-                    $.setText('#method-output', 'Enabled.');
-                    break;
-                case 'disable':
-                    instance.disable();
-                    $.setText('#method-output', 'Disabled.');
-                    break;
-                case 'setValue':
-                    instance.setValue('314159');
-                    $.setText('#method-output', 'Value set to 314159.');
-                    break;
-                case 'getValue':
-                    $.setText('#method-output', `Current value: "${instance.getValue()}"`);
-                    break;
-                case 'clear':
-                    instance.clear();
-                    $.setText('#method-output', 'Cleared.');
-                    break;
-            }
-        });
-
-        let submitCount = 0;
-
-        $.addEvent('#auto-submit-form', 'submit', (event) => {
-            event.preventDefault();
-            submitCount++;
-            $.setText(
-                '#auto-submit-status',
-                `Submit event ${submitCount} received with value "${$.getValue('#auto-submit-code')}".`,
-            );
-        });
-
-        $.addEvent('#auto-submit-clear', 'click', () => {
-            $.getData('#auto-submit-code', 'authcodeinput').clear();
-            $.setText('#auto-submit-status', 'Cleared. Enter another complete code.');
-            $.focus('#auto-submit-code');
-        });
-
-        $.addEvent('#copy-otp', 'copied.ui.clipboard', () => {
-            $.setText(
-                '#copy-otp-status',
-                'Copied 739204. Focus the first character field and paste.',
-            );
-        });
-    </script>
 </body>
 
 </html>
