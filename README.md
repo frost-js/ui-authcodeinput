@@ -20,48 +20,38 @@ Segmented authentication-code input for Frost UI with filtering, keyboard naviga
 - Outline and filled Frost UI v4 input styles
 - System-aware light and dark themes with RTL behavior
 - Native `AuthCodeInput` class and `authcodeinput` fQuery plugin
+- Existing-instance reuse with frozen resolved options
 - Prebuilt ESM and UMD bundles with source maps
 - No component-specific CSS or Sass
 - JSDoc-powered IntelliSense
+
+Explore [the demo](./demo/index.html) for interactive examples.
 
 ## Installation
 
 ### Browser projects / bundlers
 
-Install AuthCodeInput with its Frost UI v4 and fQuery v5 peers:
-
 ```bash
-npm i @fr0st/ui-authcodeinput @fr0st/ui @fr0st/query
+npm i @fr0st/ui-authcodeinput
 ```
 
-The package root resolves to the compiled ESM bundle. Import the Frost UI stylesheet and the default component export:
+Frost UI AuthCodeInput's package entry point is ESM-only and requires a browser DOM. Import the default `AuthCodeInput` export and the stylesheets in browser projects and bundlers.
 
 ```js
 import '@fr0st/ui/dist/frost-ui.min.css';
 import AuthCodeInput from '@fr0st/ui-authcodeinput';
-
-const authCodeInput = AuthCodeInput.init(
-    document.querySelector('#verification-code'),
-    {
-        autoSubmit: true,
-        length: [3, 3],
-    },
-);
 ```
 
-`@fr0st/ui` and `@fr0st/query` are peer dependencies so the component shares the application's UI and fQuery instances. The package root, `dist/*`, and `src/*` are available through package exports.
-
-AuthCodeInput requires a browser DOM or a compatible DOM environment configured through fQuery. Server-rendered applications should load the component on the client.
+`@fr0st/ui` and `@fr0st/query` are peer dependencies so the component shares the application's instances.
 
 ### Browser (ESM)
 
-The ESM bundle imports `@fr0st/ui` and `@fr0st/query`. Frost UI and fQuery also require `@fr0st/core`, so map all three dependencies when loading the bundle directly in a browser:
+The ESM bundle imports `@fr0st/ui` and `@fr0st/query`. fQuery also imports `@fr0st/core`, so map all three dependencies when loading the bundle directly in a browser:
 
 ```html
 <link
     rel="stylesheet"
     href="https://cdn.jsdelivr.net/npm/@fr0st/ui@latest/dist/frost-ui.min.css">
-
 <script type="importmap">
 {
     "imports": {
@@ -73,32 +63,33 @@ The ESM bundle imports `@fr0st/ui` and `@fr0st/query`. Frost UI and fQuery also 
 </script>
 <script type="module">
     import AuthCodeInput from 'https://cdn.jsdelivr.net/npm/@fr0st/ui-authcodeinput@latest/dist/frost-ui-authcodeinput.esm.min.js';
-
-    AuthCodeInput.init(document.querySelector('#verification-code'));
 </script>
 ```
 
 ### Browser (UMD)
 
-Load Frost UI's all-in-one bundle before AuthCodeInput. The UI bundle supplies both the `UI` and `fQuery` globals expected by the component:
+Load the bundles from your own copy or a CDN:
 
 ```html
 <link
     rel="stylesheet"
+    href="/path/to/dist/frost-ui.min.css">
+<script src="/path/to/dist/frost-ui-bundle.min.js"></script>
+<script src="/path/to/dist/frost-ui-authcodeinput.min.js"></script>
+<!-- or -->
+<link
+    rel="stylesheet"
     href="https://cdn.jsdelivr.net/npm/@fr0st/ui@latest/dist/frost-ui.min.css">
-
 <script src="https://cdn.jsdelivr.net/npm/@fr0st/ui@latest/dist/frost-ui-bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@fr0st/ui-authcodeinput@latest/dist/frost-ui-authcodeinput.min.js"></script>
 <script>
-    const authCodeInput = UI.AuthCodeInput.init(
-        document.querySelector('#verification-code'),
-    );
+    const { AuthCodeInput } = globalThis.UI;
 </script>
 ```
 
-The UMD bundle adds `AuthCodeInput` to the existing `globalThis.UI` object. It expects `globalThis.UI` and `globalThis.fQuery` to exist before it loads. If the non-bundled Frost UI build is used instead, load fQuery, Frost UI, and AuthCodeInput in that order.
+The UMD bundle adds `AuthCodeInput` to the existing `globalThis.UI` object. Load Frost UI's all-in-one bundle first; it supplies the `UI` and `fQuery` globals.
 
-Do not load the separate fQuery script when using `frost-ui-bundle.js` or `frost-ui-bundle.min.js`.
+The package root resolves to the prebuilt ESM bundle. Published files under `dist/` and `src/` are also available through matching package subpaths.
 
 ## Usage
 
@@ -132,17 +123,15 @@ const authCodeInput = AuthCodeInput.init(
 console.log(authCodeInput.getValue());
 ```
 
-Calling `AuthCodeInput.init()` again for the same input returns its existing instance. Dispose the current instance before reinitializing the input with different options.
-
 ## Options
 
 Options are resolved in this order:
 
 1. Component defaults
-2. The input's `data-ui-*` attributes
+2. The element's `data-ui-*` attributes
 3. Options passed to `AuthCodeInput.init()`
 
-Resolved `instance.options` are frozen.
+Resolved `instance.options` are shallow-frozen.
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -166,7 +155,7 @@ const authCodeInput = AuthCodeInput.init(node, {
 
 ## Data attributes
 
-Options other than `getAriaLabel` can be supplied through `data-ui-*` attributes:
+Use kebab-case `data-ui-*` attributes for serializable options. Arrays and objects use JSON. Supply callbacks and DOM nodes through JavaScript.
 
 | Attribute | Example |
 | --- | --- |
@@ -186,19 +175,20 @@ Options other than `getAriaLabel` can be supplied through `data-ui-*` attributes
     data-ui-style="filled">
 ```
 
-The component still needs to be initialized through the class or fQuery plugin. The demo uses `data-ui-toggle="authcodeinput"` as a shared initialization selector:
-
 ```js
+import $ from '@fr0st/query';
+import '@fr0st/ui-authcodeinput';
+
 $('[data-ui-toggle="authcodeinput"]').authcodeinput();
 ```
 
-The `data-ui-toggle` attribute does not initialize AuthCodeInput by itself.
+Data attributes configure options; they do not initialize AuthCodeInput by themselves. Initialize the component through the class or fQuery plugin. Changing an option's data attribute after initialization does not reconfigure the existing instance.
 
 ## Methods
 
 | Method | Returns | Description |
 | --- | --- | --- |
-| `AuthCodeInput.init(node, options?)` | `AuthCodeInput` | Return the existing instance for an input or create one. |
+| `AuthCodeInput.init(node, options?)` | `AuthCodeInput` | Return the existing instance for an element or create one. |
 | `clear()` | `void` | Clear the original and generated inputs. |
 | `disable()` | `void` | Disable the original and generated inputs. |
 | `dispose()` | `void` | Remove generated markup and registered state, then restore the original input. |
@@ -216,7 +206,15 @@ authCodeInput.enable();
 authCodeInput.dispose();
 ```
 
-An instance also exposes its original input as `instance.node` and its frozen resolved configuration as `instance.options`. Both become `null` after disposal.
+## Lifecycle
+
+Calling `AuthCodeInput.init()` again for the same element returns its existing instance. Dispose the current instance before reinitializing with different options.
+
+An instance exposes its original element as `instance.node` and its shallow-frozen resolved configuration as `instance.options`. Both become `null` after disposal.
+
+`dispose()` releases resources owned by the component and removes its registered instance. Repeated disposal is safe and does not affect a new instance initialized on the same element. Use a new instance before calling other methods after disposal.
+
+If initialization fails, the component releases resources it created and removes its registered instance before rethrowing the error. The element can then be initialized again.
 
 ## Events
 
@@ -264,7 +262,7 @@ $('#verification-code').authcodeinput('enable');
 $('#verification-code').authcodeinput('dispose');
 ```
 
-Pass an options object to initialize every matched input, or pass a public method name followed by its arguments. The first component or method result is returned.
+Pass an options object to initialize every matched element, or pass a public method name followed by its arguments. The first component or method result is returned.
 
 ## Accessibility
 
@@ -281,7 +279,9 @@ Pass an options object to initialize every matched input, or pass a public metho
 
 Applications remain responsible for meaningful labels, instructions, error messages, and validation feedback. Use `getAriaLabel` when “Character 1” through “Character N” is not appropriate for the surrounding language or context.
 
-## Form submission
+## Forms
+
+### Submission
 
 Set `autoSubmit: true` to call `requestSubmit()` on the original input's associated form when user input or paste completes the code:
 
@@ -298,7 +298,7 @@ The change event runs before automatic submission. Submission proceeds only if t
 
 Programmatic `setValue()` and `clear()` never automatically submit the form, even when filtering or truncation produces a complete code.
 
-## Form reset
+### Reset
 
 Calling the associated form's `reset()` method or activating a reset button restores the original input's default value. AuthCodeInput then filters and distributes that value across the generated inputs and updates their tab order.
 
@@ -306,9 +306,9 @@ Synchronization is deferred until after the browser finishes resetting the form,
 
 ## Themes and RTL
 
-AuthCodeInput uses Frost UI's form, flex, spacing, typography, vertical-rule, and visibility utilities. It does not ship a separate stylesheet.
+Frost UI follows the user's preferred color scheme by default. Set `data-ui-theme="light"` or `data-ui-theme="dark"` on the document or an ancestor to select a theme explicitly.
 
-Frost UI follows the user's preferred color scheme by default. Set `data-ui-theme="light"` or `data-ui-theme="dark"` on the document or an ancestor to select a theme explicitly:
+AuthCodeInput uses Frost UI's form, flex, spacing, typography, vertical-rule, and visibility utilities. It does not ship a separate stylesheet.
 
 ```html
 <section data-ui-theme="dark">
@@ -326,7 +326,7 @@ In RTL layouts, the visual order reverses and Arrow Left/Arrow Right continue to
 
 ## Development
 
-Use Node.js matching `^20.19.0 || ^22.13.0 || >=24`. Install dependencies with `npm ci`, then install Playwright browsers with `npx playwright install --with-deps`.
+Install dependencies with `npm ci`, then install Playwright browsers with `npx playwright install --with-deps`.
 
 ```bash
 npm test
@@ -334,11 +334,13 @@ npm run lint
 npm run build
 ```
 
-`npm test` rebuilds JavaScript, then runs the Playwright suite in Chromium, Firefox, and WebKit. `npm run test:browser` runs the suite against the existing bundles, so rebuild after changing source files.
+`npm test` rebuilds the bundles, then runs the Playwright suite in Chromium, Firefox, and WebKit. `npm run test:browser` runs the suite against the existing bundles, so rebuild after changing source files.
 
 After building, `npm run test:coverage` runs Chromium tests and writes coverage reports to `coverage/`.
 
 `npm run test:headed` and `npm run test:ui` also use the existing bundles and open headed browsers or the Playwright UI.
+
+To view the demo, open `demo/index.html` in your browser after building.
 
 ## License
 
