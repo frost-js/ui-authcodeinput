@@ -206,13 +206,13 @@ export default class AuthCodeInput extends BaseComponent {
             $.addEvent(this.#form, 'reset.ui.authcodeinput', this.#resetHandler);
         }
 
-        $.addEvent(this.node, 'focus.ui.authcodeinput', (_) => {
+        $.addEvent(this.node, 'focus.ui.authcodeinput', () => {
             const nextInput = this.#inputs.find((input) => !$.getValue(input));
             $.focus(nextInput || this.#inputs[0]);
         });
 
-        $.addEventDelegate(this.#container, 'focusin.ui.authcodeinput', 'input', (e) => {
-            const target = e.currentTarget;
+        $.addEventDelegate(this.#container, 'focusin.ui.authcodeinput', 'input', (event) => {
+            const target = event.currentTarget;
             const targetIndex = this.#inputs.indexOf(target);
             const lastIndex = this.#inputs.findLastIndex((input) => $.getValue(input));
 
@@ -223,8 +223,8 @@ export default class AuthCodeInput extends BaseComponent {
             }
         });
 
-        $.addEventDelegate(this.#container, 'input.ui.authcodeinput', 'input', (e) => {
-            const target = e.currentTarget;
+        $.addEventDelegate(this.#container, 'input.ui.authcodeinput', 'input', (event) => {
+            const target = event.currentTarget;
             const targetIndex = this.#inputs.indexOf(target);
             let value = $.getValue(target);
 
@@ -253,31 +253,31 @@ export default class AuthCodeInput extends BaseComponent {
             }
         });
 
-        $.addEventDelegate(this.#container, 'paste.ui.authcodeinput', 'input', (e) => {
+        $.addEventDelegate(this.#container, 'paste.ui.authcodeinput', 'input', (event) => {
             if (this.node.readOnly) {
                 return;
             }
 
-            e.preventDefault();
+            event.preventDefault();
 
             this.#distributeValue(
-                e.clipboardData.getData('text'),
-                this.#inputs.indexOf(e.currentTarget),
+                event.clipboardData.getData('text'),
+                this.#inputs.indexOf(event.currentTarget),
             );
         });
 
-        $.addEventDelegate(this.#container, 'keydown.ui.authcodeinput', 'input', (e) => {
-            if (e.ctrlKey || e.metaKey) {
+        $.addEventDelegate(this.#container, 'keydown.ui.authcodeinput', 'input', (event) => {
+            if (event.ctrlKey || event.metaKey) {
                 return;
             }
 
-            const target = e.currentTarget;
+            const target = event.currentTarget;
             const targetIndex = this.#inputs.indexOf(target);
 
-            switch (e.code) {
+            switch (event.code) {
                 case 'ArrowLeft':
                 case 'ArrowRight': {
-                    let offset = e.code === 'ArrowLeft' ? -1 : 1;
+                    let offset = event.code === 'ArrowLeft' ? -1 : 1;
 
                     if ($.css(this.#container, 'direction') === 'rtl') {
                         offset *= -1;
@@ -311,13 +311,13 @@ export default class AuthCodeInput extends BaseComponent {
                     }
                     break;
                 default:
-                    if (e.key.length !== 1 || e.key.match(this.#regExp)) {
+                    if (event.key.length !== 1 || event.key.match(this.#regExp)) {
                         return;
                     }
                     break;
             }
 
-            e.preventDefault();
+            event.preventDefault();
         });
     }
 
