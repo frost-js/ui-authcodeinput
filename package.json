@@ -1,6 +1,6 @@
 {
     "name": "@fr0st/ui-authcodeinput",
-    "version": "3.0.1",
+    "version": "3.0.2",
     "private": false,
     "description": "Segmented authentication code input component for Frost UI with validation, keyboard navigation, and optional form submission.",
     "keywords": [
