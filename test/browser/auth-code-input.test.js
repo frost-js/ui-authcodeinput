@@ -121,6 +121,45 @@ test.describe('AuthCodeInput', () => {
                 });
             });
 
+            for (const ariaHidden of [null, 'false', 'true']) {
+                test(`restores original aria-hidden ${ariaHidden ?? 'absence'} after a refresh failure`, async ({ page }) => {
+                    expect(await page.evaluate((ariaHidden) => {
+                        const node = $.findOne('#lifecycle-input');
+                        if (ariaHidden === null) {
+                            $.removeAttribute(node, 'aria-hidden');
+                        } else {
+                            $.setAttribute(node, 'aria-hidden', ariaHidden);
+                        }
+
+                        let hiddenDuringFailure;
+                        class FailingAuthCodeInput extends UI.AuthCodeInput {
+                            getValue() {
+                                hiddenDuringFailure = $.getAttribute(this.node, 'aria-hidden');
+                                throw new Error('Value failed');
+                            }
+                        }
+
+                        try {
+                            FailingAuthCodeInput.init(node);
+                        } catch (error) {
+                            return {
+                                message: error.message,
+                                hiddenDuringFailure,
+                                restored: $.getAttribute(node, 'aria-hidden'),
+                                registered: $.hasData(node, 'authcodeinput'),
+                                containers: $.find('.d-flex').length,
+                            };
+                        }
+                    }, ariaHidden)).toEqual({
+                        message: 'Value failed',
+                        hiddenDuringFailure: 'true',
+                        restored: ariaHidden,
+                        registered: false,
+                        containers: 0,
+                    });
+                });
+            }
+
             test('rolls back an invalid regex', async ({ page }) => {
                 await expect(page.evaluate(() =>
                     UI.AuthCodeInput.init($.findOne('#lifecycle-input'), { regExp: '[' }),
@@ -207,6 +246,31 @@ test.describe('AuthCodeInput', () => {
                 await expect(page.locator('#auth')).toHaveClass('existing runtime');
                 await expect(page.locator('#auth')).toHaveAttribute('tabindex', '4');
                 await expect(page.locator('.d-flex')).toHaveCount(0);
+            });
+        }
+
+        for (const ariaHidden of [null, 'false', 'true']) {
+            test(`restores original aria-hidden ${ariaHidden ?? 'absence'} after disposal`, async ({ page }) => {
+                await page.evaluate((ariaHidden) => {
+                    const node = $.findOne('#auth');
+                    if (ariaHidden !== null) {
+                        $.setAttribute(node, 'aria-hidden', ariaHidden);
+                    }
+                    UI.AuthCodeInput.init(node);
+                }, ariaHidden);
+
+                const auth = page.locator('#auth');
+                await expect(auth).toHaveAttribute('aria-hidden', 'true');
+                await expect(page.getByRole('textbox')).toHaveCount(7);
+                await expect(page.locator('.d-flex').getByRole('textbox')).toHaveCount(6);
+
+                await page.evaluate(() => $.getData('#auth', 'authcodeinput').dispose());
+
+                if (ariaHidden === null) {
+                    await expect(auth).not.toHaveAttribute('aria-hidden');
+                } else {
+                    await expect(auth).toHaveAttribute('aria-hidden', ariaHidden);
+                }
             });
         }
 

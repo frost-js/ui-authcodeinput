@@ -74,6 +74,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			autoSubmit: false,
 			getAriaLabel: (i) => `Character ${i}`
 		};
+		#ariaHidden;
 		#container;
 		#form;
 		#hidden;
@@ -95,6 +96,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			try {
 				this.#form = _fr0st_query.default.getProperty(this.node, "form");
 				this.#hidden = _fr0st_query.default.hasClass(this.node, this.constructor.classes.hide);
+				this.#ariaHidden = _fr0st_query.default.getAttribute(this.node, "aria-hidden");
 				this.#tabIndex = _fr0st_query.default.getAttribute(this.node, "tabindex");
 				this.#segments = _fr0st_query.default._wrap(this.options.length).map((length) => Number.parseInt(length, 10));
 				this.#length = this.#segments.reduce((total, length) => total + length, 0);
@@ -134,6 +136,8 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			if (this.#form && this.#resetHandler) _fr0st_query.default.removeEvent(this.#form, "reset.ui.authcodeinput", this.#resetHandler);
 			if (this.#hidden) _fr0st_query.default.addClass(this.node, this.constructor.classes.hide);
 			else _fr0st_query.default.removeClass(this.node, this.constructor.classes.hide);
+			if (this.#ariaHidden === null) _fr0st_query.default.removeAttribute(this.node, "aria-hidden");
+			else _fr0st_query.default.setAttribute(this.node, { "aria-hidden": this.#ariaHidden });
 			if (this.#tabIndex === null) _fr0st_query.default.removeAttribute(this.node, "tabindex");
 			else _fr0st_query.default.setAttribute(this.node, { tabindex: this.#tabIndex });
 			this.#container = null;
@@ -322,7 +326,10 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				}
 			}
 			_fr0st_query.default.addClass(this.node, this.constructor.classes.hide);
-			_fr0st_query.default.setAttribute(this.node, { tabindex: -1 });
+			_fr0st_query.default.setAttribute(this.node, {
+				"tabindex": -1,
+				"aria-hidden": true
+			});
 			_fr0st_query.default.before(this.node, this.#container);
 		}
 		/**

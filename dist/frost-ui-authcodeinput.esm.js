@@ -42,6 +42,7 @@ var AuthCodeInput = class extends BaseComponent {
 		autoSubmit: false,
 		getAriaLabel: (i) => `Character ${i}`
 	};
+	#ariaHidden;
 	#container;
 	#form;
 	#hidden;
@@ -63,6 +64,7 @@ var AuthCodeInput = class extends BaseComponent {
 		try {
 			this.#form = $.getProperty(this.node, "form");
 			this.#hidden = $.hasClass(this.node, this.constructor.classes.hide);
+			this.#ariaHidden = $.getAttribute(this.node, "aria-hidden");
 			this.#tabIndex = $.getAttribute(this.node, "tabindex");
 			this.#segments = $._wrap(this.options.length).map((length) => Number.parseInt(length, 10));
 			this.#length = this.#segments.reduce((total, length) => total + length, 0);
@@ -102,6 +104,8 @@ var AuthCodeInput = class extends BaseComponent {
 		if (this.#form && this.#resetHandler) $.removeEvent(this.#form, "reset.ui.authcodeinput", this.#resetHandler);
 		if (this.#hidden) $.addClass(this.node, this.constructor.classes.hide);
 		else $.removeClass(this.node, this.constructor.classes.hide);
+		if (this.#ariaHidden === null) $.removeAttribute(this.node, "aria-hidden");
+		else $.setAttribute(this.node, { "aria-hidden": this.#ariaHidden });
 		if (this.#tabIndex === null) $.removeAttribute(this.node, "tabindex");
 		else $.setAttribute(this.node, { tabindex: this.#tabIndex });
 		this.#container = null;
@@ -290,7 +294,10 @@ var AuthCodeInput = class extends BaseComponent {
 			}
 		}
 		$.addClass(this.node, this.constructor.classes.hide);
-		$.setAttribute(this.node, { tabindex: -1 });
+		$.setAttribute(this.node, {
+			"tabindex": -1,
+			"aria-hidden": true
+		});
 		$.before(this.node, this.#container);
 	}
 	/**
