@@ -106,10 +106,12 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 					this.#segments = [maxLength];
 				}
 				this.#regExp = new RegExp(this.options.regExp);
+				const focused = _fr0st_query.default.is(this.node, ":focus");
 				this.#render();
 				this.#events();
 				this.#refresh();
 				this.#refreshDisabled();
+				if (focused) this.#focusInput();
 			} catch (error) {
 				this.dispose();
 				throw error;
@@ -198,10 +200,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				};
 				_fr0st_query.default.addEvent(this.#form, "reset.ui.authcodeinput", this.#resetHandler);
 			}
-			_fr0st_query.default.addEvent(this.node, "focus.ui.authcodeinput", () => {
-				const nextInput = this.#inputs.find((input) => !_fr0st_query.default.getValue(input));
-				_fr0st_query.default.focus(nextInput || this.#inputs[0]);
-			});
+			_fr0st_query.default.addEvent(this.node, "focus.ui.authcodeinput", () => this.#focusInput());
 			_fr0st_query.default.addEventDelegate(this.#container, "focusin.ui.authcodeinput", "input", (event) => {
 				const target = event.currentTarget;
 				const targetIndex = this.#inputs.indexOf(target);
@@ -263,6 +262,13 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				}
 				event.preventDefault();
 			});
+		}
+		/**
+		* Focuses the next empty input, or the first input when the code is complete.
+		*/
+		#focusInput() {
+			const nextInput = this.#inputs.find((input) => !_fr0st_query.default.getValue(input));
+			_fr0st_query.default.focus(nextInput || this.#inputs[0]);
 		}
 		/**
 		* Refreshes the rendered input values.

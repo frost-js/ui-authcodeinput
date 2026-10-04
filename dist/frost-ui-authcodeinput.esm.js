@@ -74,10 +74,12 @@ var AuthCodeInput = class extends BaseComponent {
 				this.#segments = [maxLength];
 			}
 			this.#regExp = new RegExp(this.options.regExp);
+			const focused = $.is(this.node, ":focus");
 			this.#render();
 			this.#events();
 			this.#refresh();
 			this.#refreshDisabled();
+			if (focused) this.#focusInput();
 		} catch (error) {
 			this.dispose();
 			throw error;
@@ -166,10 +168,7 @@ var AuthCodeInput = class extends BaseComponent {
 			};
 			$.addEvent(this.#form, "reset.ui.authcodeinput", this.#resetHandler);
 		}
-		$.addEvent(this.node, "focus.ui.authcodeinput", () => {
-			const nextInput = this.#inputs.find((input) => !$.getValue(input));
-			$.focus(nextInput || this.#inputs[0]);
-		});
+		$.addEvent(this.node, "focus.ui.authcodeinput", () => this.#focusInput());
 		$.addEventDelegate(this.#container, "focusin.ui.authcodeinput", "input", (event) => {
 			const target = event.currentTarget;
 			const targetIndex = this.#inputs.indexOf(target);
@@ -231,6 +230,13 @@ var AuthCodeInput = class extends BaseComponent {
 			}
 			event.preventDefault();
 		});
+	}
+	/**
+	* Focuses the next empty input, or the first input when the code is complete.
+	*/
+	#focusInput() {
+		const nextInput = this.#inputs.find((input) => !$.getValue(input));
+		$.focus(nextInput || this.#inputs[0]);
 	}
 	/**
 	* Refreshes the rendered input values.

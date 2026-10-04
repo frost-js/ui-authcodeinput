@@ -109,6 +109,29 @@ test.describe('AuthCodeInput', () => {
             });
         }
 
+        for (const { name, value, focusIndex } of [
+            { name: 'empty', value: '', focusIndex: 0 },
+            { name: 'partial', value: '12', focusIndex: 2 },
+            { name: 'complete', value: '123456', focusIndex: 0 },
+        ]) {
+            for (const focused of [false, true]) {
+                test(`preserves focus when initialized ${focused ? 'focused' : 'unfocused'} (${name} value)`, async ({ page }) => {
+                    await page.evaluate(({ value, focused }) => {
+                        $.setHtml(document.body, '<button>Other control</button><input id="auth">');
+                        const auth = $.findOne('#auth');
+                        $.setValue(auth, value);
+                        $.focus(focused ? auth : $.findOne('button'));
+                        UI.AuthCodeInput.init(auth);
+                    }, { value, focused });
+
+                    const inputs = page.locator('.d-flex input');
+                    await expect(focused ? inputs.nth(focusIndex) : page.getByRole('button')).toBeFocused();
+                    await expect(page.locator('#auth')).toHaveAttribute('aria-hidden', 'true');
+                    await expect(page.getByRole('textbox')).toHaveCount(6);
+                });
+            }
+        }
+
         test.describe('failed initialization', () => {
             test.beforeEach(async ({ page }) => {
                 await page.evaluate(() => {
