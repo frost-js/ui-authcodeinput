@@ -44,14 +44,19 @@ export default class AuthCodeInput extends BaseComponent {
 
     /**
      * Creates an AuthCodeInput.
-     * @param {HTMLElement} node The input node.
+     * @param {HTMLInputElement} node The input node.
      * @param {AuthCodeInputOptions} [options] The AuthCodeInput options.
+     * @throws {TypeError} When the node is not an input element.
      */
     constructor(node, options) {
+        if (!$.is(node, 'input')) {
+            throw new TypeError('AuthCodeInput must be created on an input element.');
+        }
+
         super(node, options);
 
         try {
-            this.#form = this.node.form;
+            this.#form = $.getProperty(this.node, 'form');
 
             this.#hidden = $.hasClass(this.node, this.constructor.classes.hide);
             this.#tabIndex = $.getAttribute(this.node, 'tabindex');
@@ -254,7 +259,7 @@ export default class AuthCodeInput extends BaseComponent {
         });
 
         $.addEventDelegate(this.#container, 'paste.ui.authcodeinput', 'input', (event) => {
-            if (this.node.readOnly) {
+            if ($.getProperty(this.node, 'readOnly')) {
                 return;
             }
 
@@ -293,7 +298,7 @@ export default class AuthCodeInput extends BaseComponent {
                     break;
                 }
                 case 'Backspace':
-                    if (this.node.readOnly) {
+                    if ($.getProperty(this.node, 'readOnly')) {
                         return;
                     }
 

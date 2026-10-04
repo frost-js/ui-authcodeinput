@@ -53,13 +53,15 @@ var AuthCodeInput = class extends BaseComponent {
 	#tabIndex;
 	/**
 	* Creates an AuthCodeInput.
-	* @param {HTMLElement} node The input node.
+	* @param {HTMLInputElement} node The input node.
 	* @param {AuthCodeInputOptions} [options] The AuthCodeInput options.
+	* @throws {TypeError} When the node is not an input element.
 	*/
 	constructor(node, options) {
+		if (!$.is(node, "input")) throw new TypeError("AuthCodeInput must be created on an input element.");
 		super(node, options);
 		try {
-			this.#form = this.node.form;
+			this.#form = $.getProperty(this.node, "form");
 			this.#hidden = $.hasClass(this.node, this.constructor.classes.hide);
 			this.#tabIndex = $.getAttribute(this.node, "tabindex");
 			this.#segments = $._wrap(this.options.length).map((length) => Number.parseInt(length, 10));
@@ -191,7 +193,7 @@ var AuthCodeInput = class extends BaseComponent {
 			if (targetIndex < this.#inputs.length - 1) $.focus(this.#inputs[targetIndex + 1]);
 		});
 		$.addEventDelegate(this.#container, "paste.ui.authcodeinput", "input", (event) => {
-			if (this.node.readOnly) return;
+			if ($.getProperty(this.node, "readOnly")) return;
 			event.preventDefault();
 			this.#distributeValue(event.clipboardData.getData("text"), this.#inputs.indexOf(event.currentTarget));
 		});
@@ -210,7 +212,7 @@ var AuthCodeInput = class extends BaseComponent {
 					break;
 				}
 				case "Backspace":
-					if (this.node.readOnly) return;
+					if ($.getProperty(this.node, "readOnly")) return;
 					if ($.getValue(target)) {
 						$.setValue(target, "");
 						this.#updateValue();

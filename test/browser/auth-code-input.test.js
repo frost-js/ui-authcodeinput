@@ -20,6 +20,27 @@ test.describe('AuthCodeInput', () => {
             });
         }
 
+        for (const tag of ['div', 'select', 'textarea']) {
+            for (const { name, init } of [
+                { name: 'class', init: () => UI.AuthCodeInput.init($.findOne('#invalid')) },
+                { name: 'QuerySet', init: () => $('#invalid').authcodeinput() },
+            ]) {
+                test(`rejects ${tag} elements without side effects (${name})`, async ({ page }) => {
+                    const markup = await page.evaluate((tag) => {
+                        $.setHtml(document.body, `<${tag} id="invalid" class="existing" tabindex="7"></${tag}>`);
+                        return $.getHtml(document.body);
+                    }, tag);
+
+                    await expect(page.evaluate(init)).rejects.toThrow(
+                        'AuthCodeInput must be created on an input element.',
+                    );
+
+                    expect(await page.evaluate(() => $.hasData('#invalid', 'authcodeinput'))).toBe(false);
+                    expect(await page.evaluate(() => $.getHtml(document.body))).toBe(markup);
+                });
+            }
+        }
+
         test('creates multiple AuthCodeInputs (QuerySet)', async ({ page }) => {
             expect(await page.evaluate(() => {
                 $('input').authcodeinput();

@@ -85,13 +85,15 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		#tabIndex;
 		/**
 		* Creates an AuthCodeInput.
-		* @param {HTMLElement} node The input node.
+		* @param {HTMLInputElement} node The input node.
 		* @param {AuthCodeInputOptions} [options] The AuthCodeInput options.
+		* @throws {TypeError} When the node is not an input element.
 		*/
 		constructor(node, options) {
+			if (!_fr0st_query.default.is(node, "input")) throw new TypeError("AuthCodeInput must be created on an input element.");
 			super(node, options);
 			try {
-				this.#form = this.node.form;
+				this.#form = _fr0st_query.default.getProperty(this.node, "form");
 				this.#hidden = _fr0st_query.default.hasClass(this.node, this.constructor.classes.hide);
 				this.#tabIndex = _fr0st_query.default.getAttribute(this.node, "tabindex");
 				this.#segments = _fr0st_query.default._wrap(this.options.length).map((length) => Number.parseInt(length, 10));
@@ -223,7 +225,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				if (targetIndex < this.#inputs.length - 1) _fr0st_query.default.focus(this.#inputs[targetIndex + 1]);
 			});
 			_fr0st_query.default.addEventDelegate(this.#container, "paste.ui.authcodeinput", "input", (event) => {
-				if (this.node.readOnly) return;
+				if (_fr0st_query.default.getProperty(this.node, "readOnly")) return;
 				event.preventDefault();
 				this.#distributeValue(event.clipboardData.getData("text"), this.#inputs.indexOf(event.currentTarget));
 			});
@@ -242,7 +244,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 						break;
 					}
 					case "Backspace":
-						if (this.node.readOnly) return;
+						if (_fr0st_query.default.getProperty(this.node, "readOnly")) return;
 						if (_fr0st_query.default.getValue(target)) {
 							_fr0st_query.default.setValue(target, "");
 							this.#updateValue();
