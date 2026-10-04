@@ -268,9 +268,9 @@ Pass an options object to initialize every matched element, or pass a public met
 
 - Generated inputs receive sequential labels from `getAriaLabel(index)`.
 - The first generated input uses `autocomplete="one-time-code"`; remaining inputs use `autocomplete="off"`.
-- `aria-describedby`, `aria-errormessage`, `aria-invalid`, and `aria-required` are copied from the original input.
-- Native `required` state is copied only when the original input is required.
-- At initialization, `readonly` is copied to the generated inputs. Read-only inputs remain selectable and support copying and navigation; typing, paste, and backspace cannot change their values. Programmatic `setValue()` and `clear()` still work.
+- `aria-describedby`, `aria-errormessage`, `aria-invalid`, and `aria-required` are synchronized from the original input, including later changes and removals.
+- Native `disabled`, `required`, and `readonly` state is synchronized to the generated inputs. Changes to disabled ancestor fieldsets are also observed, respecting the first legend exemption.
+- Read-only inputs remain selectable and support copying and navigation; typing, paste, and backspace cannot change their values. Programmatic `setValue()` and `clear()` still work.
 - Native Ctrl/Cmd keyboard shortcuts are preserved. Pasted characters still pass through the configured filter.
 - The original `inputmode` is preserved. Without one, the default `[0-9]` expression uses `numeric`; other expressions use `text`.
 - Focus is redirected to the next incomplete input, and unavailable future positions are removed from the tab order.
@@ -278,6 +278,10 @@ Pass an options object to initialize every matched element, or pass a public met
 - Disposal restores the original input's pre-existing hidden state and `tabindex` while preserving its other classes.
 
 Applications remain responsible for meaningful labels, instructions, error messages, and validation feedback. Use `getAriaLabel` when “Character 1” through “Character N” is not appropriate for the surrounding language or context.
+
+Observed attribute changes synchronize asynchronously. Component `enable()` and `disable()` methods update the generated inputs immediately. Presentation attributes such as `dir` and `inputmode` are read at initialization.
+
+After setting the original input's value directly, dispatch a native `input` or `change` event to synchronize the character inputs. Synchronization filters and truncates the value without emitting an additional change event or automatically submitting the form. Assigning the value alone does not refresh the character inputs.
 
 ## Forms
 

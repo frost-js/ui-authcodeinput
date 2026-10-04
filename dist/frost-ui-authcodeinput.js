@@ -46,7 +46,13 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 
 //#endregion
 //#region src/auth-code-input.js
-/**
+	var ariaAttributes = [
+		"aria-describedby",
+		"aria-errormessage",
+		"aria-invalid",
+		"aria-required"
+	];
+	/**
 	* @typedef {object} AuthCodeInputOptions
 	* @property {boolean} [autoSubmit=false] Whether to submit the containing form when the code is complete.
 	* @property {((index: number) => string)} [getAriaLabel] Generates the accessible label for a character input.
@@ -80,6 +86,8 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		#hidden;
 		#inputs;
 		#length;
+		#notifying = false;
+		#observer;
 		#regExp;
 		#resetHandler;
 		#segments;
@@ -110,7 +118,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				this.#render();
 				this.#events();
 				this.#refresh();
-				this.#refreshDisabled();
+				this.#refreshState();
 				if (focused) this.#focusInput();
 			} catch (error) {
 				this.dispose();
@@ -128,13 +136,14 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		*/
 		disable() {
 			_fr0st_query.default.setAttribute(this.node, { disabled: true });
-			this.#refreshDisabled();
+			this.#refreshState();
 		}
 		/** @inheritdoc */
 		dispose() {
 			if (!this.node) return;
+			this.#observer?.disconnect();
 			_fr0st_query.default.remove(this.#container);
-			_fr0st_query.default.removeEvent(this.node, "focus.ui.authcodeinput");
+			_fr0st_query.default.removeEvent(this.node, "focus.ui.authcodeinput input.ui.authcodeinput change.ui.authcodeinput");
 			if (this.#form && this.#resetHandler) _fr0st_query.default.removeEvent(this.#form, "reset.ui.authcodeinput", this.#resetHandler);
 			if (this.#hidden) _fr0st_query.default.addClass(this.node, this.constructor.classes.hide);
 			else _fr0st_query.default.removeClass(this.node, this.constructor.classes.hide);
@@ -145,6 +154,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			this.#container = null;
 			this.#form = null;
 			this.#inputs = null;
+			this.#observer = null;
 			this.#regExp = null;
 			this.#resetHandler = null;
 			this.#segments = null;
@@ -155,7 +165,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		*/
 		enable() {
 			_fr0st_query.default.removeAttribute(this.node, "disabled");
-			this.#refreshDisabled();
+			this.#refreshState();
 		}
 		/**
 		* Gets the current value.
@@ -201,6 +211,27 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				_fr0st_query.default.addEvent(this.#form, "reset.ui.authcodeinput", this.#resetHandler);
 			}
 			_fr0st_query.default.addEvent(this.node, "focus.ui.authcodeinput", () => this.#focusInput());
+			_fr0st_query.default.addEvent(this.node, "input.ui.authcodeinput change.ui.authcodeinput", () => {
+				if (this.#notifying) return;
+				this.#refresh();
+			});
+			this.#observer = new MutationObserver(() => {
+				if (!this.node) return;
+				this.#refreshState();
+			});
+			this.#observer.observe(this.node, {
+				attributes: true,
+				attributeFilter: [
+					"disabled",
+					"required",
+					"readonly",
+					...ariaAttributes
+				]
+			});
+			for (const fieldset of _fr0st_query.default.parents(this.node, "fieldset")) this.#observer.observe(fieldset, {
+				attributes: true,
+				attributeFilter: ["disabled"]
+			});
 			_fr0st_query.default.addEventDelegate(this.#container, "focusin.ui.authcodeinput", "input", (event) => {
 				const target = event.currentTarget;
 				const targetIndex = this.#inputs.indexOf(target);
@@ -279,11 +310,19 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			this.#updateValue({ notify: false });
 		}
 		/**
-		* Refreshes the disabled state.
+		* Synchronizes native input state and inherited accessibility attributes.
 		*/
-		#refreshDisabled() {
-			if (_fr0st_query.default.is(this.node, ":disabled")) _fr0st_query.default.setAttribute(this.#inputs, { disabled: true });
-			else _fr0st_query.default.removeAttribute(this.#inputs, "disabled");
+		#refreshState() {
+			_fr0st_query.default.setProperty(this.#inputs, {
+				disabled: _fr0st_query.default.is(this.node, ":disabled"),
+				required: _fr0st_query.default.getProperty(this.node, "required"),
+				readOnly: _fr0st_query.default.getProperty(this.node, "readOnly")
+			});
+			for (const attribute of ariaAttributes) {
+				const value = _fr0st_query.default.getAttribute(this.node, attribute);
+				if (value === null) _fr0st_query.default.removeAttribute(this.#inputs, attribute);
+				else _fr0st_query.default.setAttribute(this.#inputs, { [attribute]: value });
+			}
 		}
 		/**
 		* Renders the AuthCodeInput.
@@ -295,14 +334,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			this.#container = _fr0st_query.default.create("div", containerOptions);
 			this.#inputs = [];
 			const inputMode = _fr0st_query.default.getAttribute(this.node, "inputmode") || (this.options.regExp === "[0-9]" ? "numeric" : "text");
-			const required = _fr0st_query.default.is(this.node, ":required");
-			const inheritedAttributes = Object.fromEntries([
-				"aria-describedby",
-				"aria-errormessage",
-				"aria-invalid",
-				"aria-required",
-				"readonly"
-			].map((attribute) => [attribute, _fr0st_query.default.getAttribute(this.node, attribute)]).filter(([, value]) => value !== null));
 			let inputIndex = 0;
 			for (const [segmentIndex, length] of this.#segments.entries()) {
 				if (segmentIndex > 0) {
@@ -311,7 +342,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				}
 				for (let i = 0; i < length; i++) {
 					const attributes = {
-						...inheritedAttributes,
 						"type": "text",
 						"maxlength": 1,
 						"size": 1,
@@ -320,7 +350,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 						"autocomplete": inputIndex ? "off" : "one-time-code",
 						"aria-label": this.options.getAriaLabel(++inputIndex)
 					};
-					if (required) attributes.required = "";
 					const formInput = _fr0st_query.default.create("div", { class: this.constructor.classes.inputContainer });
 					const input = _fr0st_query.default.create("input", {
 						class: [`input-${this.options.style}`, this.constructor.classes.input],
@@ -350,7 +379,12 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			if (newValue === this.getValue()) return;
 			_fr0st_query.default.setValue(this.node, newValue);
 			if (!notify) return;
-			_fr0st_query.default.triggerEvent(this.node, "change.ui.authcodeinput");
+			this.#notifying = true;
+			try {
+				_fr0st_query.default.triggerEvent(this.node, "change.ui.authcodeinput");
+			} finally {
+				this.#notifying = false;
+			}
 			if (!this.node) return;
 			if (this.#form && this.options.autoSubmit && newValue.length === this.#length && newValue === this.getValue()) this.#form.requestSubmit();
 		}

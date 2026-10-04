@@ -484,6 +484,89 @@ test.describe('AuthCodeInput', () => {
     });
 
     test.describe('input attributes', () => {
+        for (const { attribute, property } of [
+            { attribute: 'disabled', property: 'disabled' },
+            { attribute: 'required', property: 'required' },
+            { attribute: 'readonly', property: 'readOnly' },
+        ]) {
+            test(`synchronizes native ${attribute} changes`, async ({ page }) => {
+                await page.evaluate(() => UI.AuthCodeInput.init($.findOne('#auth')));
+
+                await page.evaluate((property) => $.setProperty('#auth', property, true), property);
+                await expect(page.locator(`.d-flex input[${attribute}]`)).toHaveCount(6);
+
+                await page.evaluate((property) => $.setProperty('#auth', property, false), property);
+                await expect(page.locator(`.d-flex input[${attribute}]`)).toHaveCount(0);
+            });
+        }
+
+        test('synchronizes nested fieldsets and respects the first legend exemption', async ({ page }) => {
+            await page.evaluate(() => {
+                $.setHtml(document.body, `
+                    <fieldset id="outer">
+                        <legend><input id="legend-auth"></legend>
+                        <fieldset id="inner"><input id="auth"></fieldset>
+                    </fieldset>
+                `);
+                UI.AuthCodeInput.init($.findOne('#legend-auth'));
+                UI.AuthCodeInput.init($.findOne('#auth'));
+            });
+
+            await page.evaluate(() => $.setProperty('#outer', 'disabled', true));
+            await expect(page.locator('#inner .d-flex input[disabled]')).toHaveCount(6);
+            await expect(page.locator('legend .d-flex input:enabled')).toHaveCount(6);
+            await expect(page.locator('legend .d-flex input[disabled]')).toHaveCount(0);
+
+            await page.evaluate(() => {
+                $.setProperty('#inner', 'disabled', true);
+                $.setProperty('#outer', 'disabled', false);
+            });
+            await expect(page.locator('#inner .d-flex input[disabled]')).toHaveCount(6);
+
+            await page.evaluate(() => $.setProperty('#inner', 'disabled', false));
+            await expect(page.locator('#inner .d-flex input:enabled')).toHaveCount(6);
+            await expect(page.locator('#inner .d-flex input[disabled]')).toHaveCount(0);
+        });
+
+        for (const attribute of ['aria-describedby', 'aria-errormessage', 'aria-invalid', 'aria-required']) {
+            test(`synchronizes native ${attribute} updates and removal`, async ({ page }) => {
+                await page.evaluate(() => UI.AuthCodeInput.init($.findOne('#auth')));
+                const inputs = page.locator('.d-flex input');
+
+                for (const value of ['true', 'false']) {
+                    await page.evaluate(({ attribute, value }) => {
+                        $.setAttribute('#auth', { [attribute]: value });
+                    }, { attribute, value });
+                    for (let index = 0; index < 6; index++) {
+                        await expect(inputs.nth(index)).toHaveAttribute(attribute, value);
+                    }
+                }
+
+                await page.evaluate((attribute) => $.removeAttribute('#auth', attribute), attribute);
+                await expect(page.locator(`.d-flex input[${attribute}]`)).toHaveCount(0);
+                await expect(inputs.first()).toHaveAttribute('aria-label', 'Character 1');
+                await expect(page.locator('#auth')).toHaveAttribute('aria-hidden', 'true');
+            });
+        }
+
+        test('applies readonly changes to editing without changing the value', async ({ page }) => {
+            await page.evaluate(() => {
+                UI.AuthCodeInput.init($.findOne('#auth')).setValue('12');
+                $.setProperty('#auth', 'readOnly', true);
+            });
+
+            const inputs = page.locator('.d-flex input');
+            await expect(inputs.first()).toHaveJSProperty('readOnly', true);
+            await inputs.first().press('Backspace');
+            await inputs.nth(2).press('3');
+            await expect(page.locator('#auth')).toHaveValue('12');
+
+            await page.evaluate(() => $.setProperty('#auth', 'readOnly', false));
+            await expect(inputs.first()).toHaveJSProperty('readOnly', false);
+            await inputs.nth(2).press('3');
+            await expect(page.locator('#auth')).toHaveValue('123');
+        });
+
         test('inherits the initial disabled state', async ({ page }) => {
             await page.evaluate(() => {
                 const auth = $.findOne('#auth');
@@ -574,6 +657,72 @@ test.describe('AuthCodeInput', () => {
             }
             await expect(containers.nth(1).locator('input')).toHaveCount(6);
             await expect(containers.nth(1).locator('input[required]')).toHaveCount(0);
+        });
+    });
+
+    test.describe('native synchronization', () => {
+        for (const event of ['input', 'change']) {
+            test(`synchronizes a native ${event} event silently`, async ({ page }) => {
+                await page.evaluate((event) => {
+                    $.setHtml(document.body, '<form id="form"><input id="auth"></form>');
+                    window.authCodeInputEvents = { changes: 0, submits: 0 };
+                    $.addEvent('#form', 'submit', (event) => {
+                        event.preventDefault();
+                        window.authCodeInputEvents.submits++;
+                    });
+                    UI.AuthCodeInput.init($.findOne('#auth'), { autoSubmit: true });
+                    $.addEvent('#auth', 'change', () => window.authCodeInputEvents.changes++);
+                    $.setValue('#auth', '1a234567');
+                    $.triggerEvent('#auth', event);
+                }, event);
+
+                await expect(page.locator('#auth')).toHaveValue('123456');
+                const inputs = page.locator('.d-flex input');
+                for (let index = 0; index < 6; index++) {
+                    await expect(inputs.nth(index)).toHaveValue('123456'[index]);
+                }
+                expect(await page.evaluate(() => window.authCodeInputEvents)).toEqual({
+                    changes: event === 'change' ? 1 : 0,
+                    submits: 0,
+                });
+            });
+        }
+
+        test('preserves character positions during its own change event', async ({ page }) => {
+            await page.evaluate(() => {
+                UI.AuthCodeInput.init($.findOne('#auth')).setValue('123456');
+            });
+
+            const inputs = page.locator('.d-flex input');
+            await inputs.nth(2).press('Backspace');
+            await expect(page.locator('#auth')).toHaveValue('12456');
+            for (let index = 0; index < 6; index++) {
+                await expect(inputs.nth(index)).toHaveValue(['1', '2', '', '4', '5', '6'][index]);
+            }
+        });
+
+        test('stops native synchronization after disposal with pending mutations', async ({ page }) => {
+            expect(await page.evaluate(async () => {
+                $.setHtml(document.body, '<fieldset id="fieldset"><input id="auth"></fieldset>');
+                const auth = $.findOne('#auth');
+                const instance = UI.AuthCodeInput.init(auth);
+                const inputs = $.find('input', $.prev(auth).shift());
+                $.setProperty(auth, { disabled: true, required: true, readOnly: true });
+                $.setAttribute(auth, { 'aria-invalid': 'true' });
+                instance.dispose();
+                $.setProperty('#fieldset', 'disabled', true);
+                $.setValue(auth, 'abc123');
+                $.triggerEvent(auth, 'input');
+                $.triggerEvent(auth, 'change');
+                await new Promise((resolve) => setTimeout(resolve, 0));
+                return {
+                    value: $.getValue(auth),
+                    untouched: inputs.every((input) =>
+                        !input.disabled && !input.required && !input.readOnly &&
+                        $.getAttribute(input, 'aria-invalid') === null,
+                    ),
+                };
+            })).toEqual({ value: 'abc123', untouched: true });
         });
     });
 

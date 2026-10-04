@@ -2,6 +2,13 @@ import $ from '@fr0st/query';
 import { BaseComponent } from '@fr0st/ui';
 import { getValidCharacters } from './helpers.js';
 
+const ariaAttributes = [
+    'aria-describedby',
+    'aria-errormessage',
+    'aria-invalid',
+    'aria-required',
+];
+
 /**
  * @typedef {object} AuthCodeInputOptions
  * @property {boolean} [autoSubmit=false] Whether to submit the containing form when the code is complete.
@@ -38,6 +45,8 @@ export default class AuthCodeInput extends BaseComponent {
     #hidden;
     #inputs;
     #length;
+    #notifying = false;
+    #observer;
     #regExp;
     #resetHandler;
     #segments;
@@ -84,7 +93,7 @@ export default class AuthCodeInput extends BaseComponent {
             this.#render();
             this.#events();
             this.#refresh();
-            this.#refreshDisabled();
+            this.#refreshState();
 
             if (focused) {
                 this.#focusInput();
@@ -107,7 +116,7 @@ export default class AuthCodeInput extends BaseComponent {
      */
     disable() {
         $.setAttribute(this.node, { disabled: true });
-        this.#refreshDisabled();
+        this.#refreshState();
     }
 
     /** @inheritdoc */
@@ -116,8 +125,9 @@ export default class AuthCodeInput extends BaseComponent {
             return;
         }
 
+        this.#observer?.disconnect();
         $.remove(this.#container);
-        $.removeEvent(this.node, 'focus.ui.authcodeinput');
+        $.removeEvent(this.node, 'focus.ui.authcodeinput input.ui.authcodeinput change.ui.authcodeinput');
 
         if (this.#form && this.#resetHandler) {
             $.removeEvent(this.#form, 'reset.ui.authcodeinput', this.#resetHandler);
@@ -144,6 +154,7 @@ export default class AuthCodeInput extends BaseComponent {
         this.#container = null;
         this.#form = null;
         this.#inputs = null;
+        this.#observer = null;
         this.#regExp = null;
         this.#resetHandler = null;
         this.#segments = null;
@@ -156,7 +167,7 @@ export default class AuthCodeInput extends BaseComponent {
      */
     enable() {
         $.removeAttribute(this.node, 'disabled');
-        this.#refreshDisabled();
+        this.#refreshState();
     }
 
     /**
@@ -226,6 +237,31 @@ export default class AuthCodeInput extends BaseComponent {
         }
 
         $.addEvent(this.node, 'focus.ui.authcodeinput', () => this.#focusInput());
+        $.addEvent(this.node, 'input.ui.authcodeinput change.ui.authcodeinput', () => {
+            if (this.#notifying) {
+                return;
+            }
+
+            this.#refresh();
+        });
+
+        this.#observer = new MutationObserver(() => {
+            if (!this.node) {
+                return;
+            }
+
+            this.#refreshState();
+        });
+        this.#observer.observe(this.node, {
+            attributes: true,
+            attributeFilter: ['disabled', 'required', 'readonly', ...ariaAttributes],
+        });
+        for (const fieldset of $.parents(this.node, 'fieldset')) {
+            this.#observer.observe(fieldset, {
+                attributes: true,
+                attributeFilter: ['disabled'],
+            });
+        }
 
         $.addEventDelegate(this.#container, 'focusin.ui.authcodeinput', 'input', (event) => {
             const target = event.currentTarget;
@@ -359,13 +395,22 @@ export default class AuthCodeInput extends BaseComponent {
     }
 
     /**
-     * Refreshes the disabled state.
+     * Synchronizes native input state and inherited accessibility attributes.
      */
-    #refreshDisabled() {
-        if ($.is(this.node, ':disabled')) {
-            $.setAttribute(this.#inputs, { disabled: true });
-        } else {
-            $.removeAttribute(this.#inputs, 'disabled');
+    #refreshState() {
+        $.setProperty(this.#inputs, {
+            disabled: $.is(this.node, ':disabled'),
+            required: $.getProperty(this.node, 'required'),
+            readOnly: $.getProperty(this.node, 'readOnly'),
+        });
+
+        for (const attribute of ariaAttributes) {
+            const value = $.getAttribute(this.node, attribute);
+            if (value === null) {
+                $.removeAttribute(this.#inputs, attribute);
+            } else {
+                $.setAttribute(this.#inputs, { [attribute]: value });
+            }
         }
     }
 
@@ -387,22 +432,6 @@ export default class AuthCodeInput extends BaseComponent {
 
         const inputMode = $.getAttribute(this.node, 'inputmode') ||
             (this.options.regExp === '[0-9]' ? 'numeric' : 'text');
-        const required = $.is(this.node, ':required');
-        const inheritedAttributes = Object.fromEntries(
-            [
-                'aria-describedby',
-                'aria-errormessage',
-                'aria-invalid',
-                'aria-required',
-                'readonly',
-            ]
-                .map((attribute) => [
-                    attribute,
-                    $.getAttribute(this.node, attribute),
-                ])
-                .filter(([, value]) => value !== null),
-        );
-
         let inputIndex = 0;
 
         for (const [segmentIndex, length] of this.#segments.entries()) {
@@ -415,7 +444,6 @@ export default class AuthCodeInput extends BaseComponent {
 
             for (let i = 0; i < length; i++) {
                 const attributes = {
-                    ...inheritedAttributes,
                     'type': 'text',
                     'maxlength': 1,
                     'size': 1,
@@ -424,10 +452,6 @@ export default class AuthCodeInput extends BaseComponent {
                     'autocomplete': inputIndex ? 'off' : 'one-time-code',
                     'aria-label': this.options.getAriaLabel(++inputIndex),
                 };
-
-                if (required) {
-                    attributes.required = '';
-                }
 
                 const formInput = $.create('div', {
                     class: this.constructor.classes.inputContainer,
@@ -482,7 +506,12 @@ export default class AuthCodeInput extends BaseComponent {
             return;
         }
 
-        $.triggerEvent(this.node, 'change.ui.authcodeinput');
+        this.#notifying = true;
+        try {
+            $.triggerEvent(this.node, 'change.ui.authcodeinput');
+        } finally {
+            this.#notifying = false;
+        }
 
         if (!this.node) {
             return;
