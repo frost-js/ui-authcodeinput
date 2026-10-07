@@ -307,23 +307,16 @@ test.describe('AuthCodeInput', () => {
             });
         }
 
-        test('preserves consumer change listeners registered before and after initialization', async ({ page }) => {
-            const events = await page.evaluate(() => {
-                const node = $.findOne('#auth');
-                const events = [];
-                $.addEvent(node, 'change.ui.authcodeinput', (event) => events.push(`before:${event.type}`));
-
-                const instance = UI.AuthCodeInput.init(node);
-                $.addEvent(node, 'change.ui.authcodeinput', (event) => events.push(`after:${event.type}`));
-
-                instance.dispose();
-                instance.dispose();
-                $.triggerEvent(node, 'change.ui.authcodeinput');
-
-                return events;
+        test('restores existing hidden and absent tabindex state', async ({ page }) => {
+            await page.evaluate(() => {
+                $.setHtml(document.body, '<input class="visually-hidden existing" id="auth">');
+                const auth = $.findOne('#auth');
+                UI.AuthCodeInput.init(auth).dispose();
             });
 
-            expect(events).toEqual(['before:change', 'after:change']);
+            const auth = page.locator('#auth');
+            await expect(auth).toHaveClass('visually-hidden existing');
+            await expect(auth).not.toHaveAttribute('tabindex');
         });
 
         for (const ariaHidden of [null, 'false', 'true']) {
@@ -351,16 +344,23 @@ test.describe('AuthCodeInput', () => {
             });
         }
 
-        test('restores existing hidden and absent tabindex state', async ({ page }) => {
-            await page.evaluate(() => {
-                $.setHtml(document.body, '<input class="visually-hidden existing" id="auth">');
-                const auth = $.findOne('#auth');
-                UI.AuthCodeInput.init(auth).dispose();
+        test('preserves consumer change listeners registered before and after initialization', async ({ page }) => {
+            const events = await page.evaluate(() => {
+                const node = $.findOne('#auth');
+                const events = [];
+                $.addEvent(node, 'change.ui.authcodeinput', (event) => events.push(`before:${event.type}`));
+
+                const instance = UI.AuthCodeInput.init(node);
+                $.addEvent(node, 'change.ui.authcodeinput', (event) => events.push(`after:${event.type}`));
+
+                instance.dispose();
+                instance.dispose();
+                $.triggerEvent(node, 'change.ui.authcodeinput');
+
+                return events;
             });
 
-            const auth = page.locator('#auth');
-            await expect(auth).toHaveClass('visually-hidden existing');
-            await expect(auth).not.toHaveAttribute('tabindex');
+            expect(events).toEqual(['before:change', 'after:change']);
         });
 
         test('ignores repeated disposal after reinitialization', async ({ page }) => {
