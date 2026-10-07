@@ -1125,7 +1125,12 @@ test.describe('AuthCodeInput', () => {
         for (const { name, options = {}, attributes = {}, segments } of [
             { name: 'default', segments: [3, 3] },
             { name: 'option', options: { length: [2, 4] }, segments: [2, 4] },
+            { name: 'single segment option', options: { length: [2] }, segments: [2] },
+            { name: 'empty segment option', options: { length: [] }, segments: [] },
             { name: 'data attribute', attributes: { 'data-ui-length': '[2,2]' }, segments: [2, 2] },
+            { name: 'single segment data attribute', attributes: { 'data-ui-length': '[2]' }, segments: [2] },
+            { name: 'empty segment data attribute', attributes: { 'data-ui-length': '[]' }, segments: [] },
+            { name: 'option over data attribute', options: { length: [2] }, attributes: { 'data-ui-length': '[3,3,3]' }, segments: [2] },
             { name: 'shorter maxlength', attributes: { maxlength: '4' }, segments: [4] },
             { name: 'longer maxlength', attributes: { maxlength: '8' }, segments: [3, 3] },
         ]) {
@@ -1144,8 +1149,8 @@ test.describe('AuthCodeInput', () => {
                 await expect(container.locator('input')).toHaveCount(length);
                 await expect(container.locator(':scope > div.form-input.w-auto')).toHaveCount(length);
                 await expect(container.locator(':scope > span.vr.align-self-center.fs-5'))
-                    .toHaveCount(segments.length - 1);
-                await expect(container.locator(':scope > *')).toHaveCount(length + segments.length - 1);
+                    .toHaveCount(Math.max(0, segments.length - 1));
+                await expect(container.locator(':scope > *')).toHaveCount(length + Math.max(0, segments.length - 1));
                 let offset = 0;
                 for (const segment of segments.slice(0, -1)) {
                     offset += segment;
@@ -1155,6 +1160,21 @@ test.describe('AuthCodeInput', () => {
                 }
             });
         }
+    });
+
+    test('keeps custom segment arrays separate from callers and other instances', async ({ page }) => {
+        expect(await page.evaluate(() => {
+            const configured = Object.freeze([2]);
+            const instance = UI.AuthCodeInput.init($.findOne('#auth'), { length: configured });
+            const other = $.create('input');
+            $.append(document.body, other);
+
+            return {
+                configured,
+                sameArray: instance.options.length === configured,
+                defaults: UI.AuthCodeInput.init(other).options.length,
+            };
+        })).toEqual({ configured: [2], sameArray: false, defaults: [3, 3] });
     });
 
     test.describe('regExp option', () => {
