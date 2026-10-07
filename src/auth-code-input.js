@@ -45,7 +45,6 @@ export default class AuthCodeInput extends BaseComponent {
     #hidden;
     #inputs = null;
     #length;
-    #notifying = false;
     #observer = null;
     #regExp = null;
     #resetHandler = null;
@@ -237,12 +236,10 @@ export default class AuthCodeInput extends BaseComponent {
         }
 
         $.addEvent(this.node, 'focus.ui.authcodeinput', () => this.#focusInput());
-        $.addEvent(this.node, 'input.ui.authcodeinput change.ui.authcodeinput', () => {
-            if (this.#notifying) {
-                return;
+        $.addEvent(this.node, 'input.ui.authcodeinput change.ui.authcodeinput', (event) => {
+            if (!event.skipUpdate) {
+                this.#refresh();
             }
-
-            this.#refresh();
         });
 
         this.#observer = new MutationObserver(() => {
@@ -506,12 +503,9 @@ export default class AuthCodeInput extends BaseComponent {
             return;
         }
 
-        this.#notifying = true;
-        try {
-            $.triggerEvent(this.node, 'change.ui.authcodeinput');
-        } finally {
-            this.#notifying = false;
-        }
+        $.triggerEvent(this.node, 'change.ui.authcodeinput', {
+            data: { skipUpdate: true },
+        });
 
         if (!this.node) {
             return;

@@ -54,7 +54,6 @@ var AuthCodeInput = class extends BaseComponent {
 	#hidden;
 	#inputs = null;
 	#length;
-	#notifying = false;
 	#observer = null;
 	#regExp = null;
 	#resetHandler = null;
@@ -179,9 +178,8 @@ var AuthCodeInput = class extends BaseComponent {
 			$.addEvent(this.#form, "reset.ui.authcodeinput", this.#resetHandler);
 		}
 		$.addEvent(this.node, "focus.ui.authcodeinput", () => this.#focusInput());
-		$.addEvent(this.node, "input.ui.authcodeinput change.ui.authcodeinput", () => {
-			if (this.#notifying) return;
-			this.#refresh();
+		$.addEvent(this.node, "input.ui.authcodeinput change.ui.authcodeinput", (event) => {
+			if (!event.skipUpdate) this.#refresh();
 		});
 		this.#observer = new MutationObserver(() => {
 			if (!this.node) return;
@@ -347,12 +345,7 @@ var AuthCodeInput = class extends BaseComponent {
 		if (newValue === this.getValue()) return;
 		$.setValue(this.node, newValue);
 		if (!notify) return;
-		this.#notifying = true;
-		try {
-			$.triggerEvent(this.node, "change.ui.authcodeinput");
-		} finally {
-			this.#notifying = false;
-		}
+		$.triggerEvent(this.node, "change.ui.authcodeinput", { data: { skipUpdate: true } });
 		if (!this.node) return;
 		if (this.#form && this.options.autoSubmit && newValue.length === this.#length && newValue === this.getValue()) this.#form.requestSubmit();
 	}

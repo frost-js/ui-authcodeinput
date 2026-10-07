@@ -86,7 +86,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		#hidden;
 		#inputs = null;
 		#length;
-		#notifying = false;
 		#observer = null;
 		#regExp = null;
 		#resetHandler = null;
@@ -211,9 +210,8 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				_fr0st_query.default.addEvent(this.#form, "reset.ui.authcodeinput", this.#resetHandler);
 			}
 			_fr0st_query.default.addEvent(this.node, "focus.ui.authcodeinput", () => this.#focusInput());
-			_fr0st_query.default.addEvent(this.node, "input.ui.authcodeinput change.ui.authcodeinput", () => {
-				if (this.#notifying) return;
-				this.#refresh();
+			_fr0st_query.default.addEvent(this.node, "input.ui.authcodeinput change.ui.authcodeinput", (event) => {
+				if (!event.skipUpdate) this.#refresh();
 			});
 			this.#observer = new MutationObserver(() => {
 				if (!this.node) return;
@@ -379,12 +377,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			if (newValue === this.getValue()) return;
 			_fr0st_query.default.setValue(this.node, newValue);
 			if (!notify) return;
-			this.#notifying = true;
-			try {
-				_fr0st_query.default.triggerEvent(this.node, "change.ui.authcodeinput");
-			} finally {
-				this.#notifying = false;
-			}
+			_fr0st_query.default.triggerEvent(this.node, "change.ui.authcodeinput", { data: { skipUpdate: true } });
 			if (!this.node) return;
 			if (this.#form && this.options.autoSubmit && newValue.length === this.#length && newValue === this.getValue()) this.#form.requestSubmit();
 		}

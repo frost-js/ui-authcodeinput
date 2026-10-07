@@ -770,6 +770,29 @@ test.describe('AuthCodeInput', () => {
                     submits: 0,
                 });
             });
+
+            test(`synchronizes a native ${event} event dispatched by a change listener`, async ({ page }) => {
+                await page.evaluate((eventType) => {
+                    const node = $.findOne('#auth');
+                    UI.AuthCodeInput.init(node);
+                    window.changes = 0;
+                    $.addEvent(node, 'change.ui.authcodeinput', (event) => {
+                        window.changes++;
+                        if (event.skipUpdate) {
+                            $.setValue(node, '98');
+                            node.dispatchEvent(new Event(eventType, { bubbles: true }));
+                        }
+                    });
+                }, event);
+
+                const inputs = page.locator('.d-flex input');
+                await inputs.first().press('1');
+                await expect(page.locator('#auth')).toHaveValue('98');
+                for (let index = 0; index < 6; index++) {
+                    await expect(inputs.nth(index)).toHaveValue('98'[index] || '');
+                }
+                expect(await page.evaluate(() => window.changes)).toBe(event === 'change' ? 2 : 1);
+            });
         }
     });
 
@@ -784,6 +807,7 @@ test.describe('AuthCodeInput', () => {
                         currentTarget: $.getProperty(event.currentTarget, 'id'),
                         detail: event.detail,
                         namespace: event.namespace,
+                        skipUpdate: event.skipUpdate,
                         target: $.getProperty(event.target, 'id'),
                         type: event.type,
                         value: $.getValue(event.currentTarget),
@@ -804,6 +828,7 @@ test.describe('AuthCodeInput', () => {
                     currentTarget: 'auth',
                     detail: null,
                     namespace: 'ui.authcodeinput',
+                    skipUpdate: true,
                     target: 'auth',
                     type: 'change',
                     value: '1',
@@ -812,6 +837,7 @@ test.describe('AuthCodeInput', () => {
                     currentTarget: 'auth',
                     detail: null,
                     namespace: 'ui.authcodeinput',
+                    skipUpdate: true,
                     target: 'auth',
                     type: 'change',
                     value: '12',
