@@ -81,16 +81,16 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			getAriaLabel: (i) => `Character ${i}`
 		};
 		#ariaHidden;
-		#container;
-		#form;
+		#container = null;
+		#form = null;
 		#hidden;
-		#inputs;
+		#inputs = null;
 		#length;
 		#notifying = false;
-		#observer;
-		#regExp;
-		#resetHandler;
-		#segments;
+		#observer = null;
+		#regExp = null;
+		#resetHandler = null;
+		#segments = null;
 		#tabIndex;
 		/**
 		* Creates an AuthCodeInput.

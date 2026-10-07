@@ -1160,21 +1160,21 @@ test.describe('AuthCodeInput', () => {
                 }
             });
         }
-    });
 
-    test('keeps custom segment arrays separate from callers and other instances', async ({ page }) => {
-        expect(await page.evaluate(() => {
-            const configured = Object.freeze([2]);
-            const instance = UI.AuthCodeInput.init($.findOne('#auth'), { length: configured });
-            const other = $.create('input');
-            $.append(document.body, other);
+        test('keeps custom segment arrays separate from callers and other instances', async ({ page }) => {
+            expect(await page.evaluate(() => {
+                const configured = Object.freeze([2]);
+                const instance = UI.AuthCodeInput.init($.findOne('#auth'), { length: configured });
+                const other = $.create('input');
+                $.append(document.body, other);
 
-            return {
-                configured,
-                sameArray: instance.options.length === configured,
-                defaults: UI.AuthCodeInput.init(other).options.length,
-            };
-        })).toEqual({ configured: [2], sameArray: false, defaults: [3, 3] });
+                return {
+                    configured,
+                    sameArray: instance.options.length === configured,
+                    defaults: UI.AuthCodeInput.init(other).options.length,
+                };
+            })).toEqual({ configured: [2], sameArray: false, defaults: [3, 3] });
+        });
     });
 
     test.describe('regExp option', () => {
