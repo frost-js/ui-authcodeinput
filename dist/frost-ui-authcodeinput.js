@@ -88,7 +88,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		#length;
 		#observer = null;
 		#regExp = null;
-		#resetHandler = null;
 		#segments = null;
 		#tabIndex;
 		/**
@@ -142,8 +141,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			if (!this.node) return;
 			this.#observer?.disconnect();
 			_fr0st_query.default.remove(this.#container);
-			_fr0st_query.default.removeEvent(this.node, "focus.ui.authcodeinput input.ui.authcodeinput change.ui.authcodeinput");
-			if (this.#form && this.#resetHandler) _fr0st_query.default.removeEvent(this.#form, "reset.ui.authcodeinput", this.#resetHandler);
 			if (this.#hidden) _fr0st_query.default.addClass(this.node, this.constructor.classes.hide);
 			else _fr0st_query.default.removeClass(this.node, this.constructor.classes.hide);
 			if (this.#ariaHidden === null) _fr0st_query.default.removeAttribute(this.node, "aria-hidden");
@@ -155,7 +152,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			this.#inputs = null;
 			this.#observer = null;
 			this.#regExp = null;
-			this.#resetHandler = null;
 			this.#segments = null;
 			super.dispose();
 		}
@@ -201,16 +197,13 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		* Attaches events for the AuthCodeInput.
 		*/
 		#events() {
-			if (this.#form) {
-				this.#resetHandler = (event) => {
-					setTimeout(() => {
-						if (this.node && !event.defaultPrevented) this.#refresh();
-					}, 0);
-				};
-				_fr0st_query.default.addEvent(this.#form, "reset.ui.authcodeinput", this.#resetHandler);
-			}
-			_fr0st_query.default.addEvent(this.node, "focus.ui.authcodeinput", () => this.#focusInput());
-			_fr0st_query.default.addEvent(this.node, "input.ui.authcodeinput change.ui.authcodeinput", (event) => {
+			if (this.#form) this.listen(this.#form, "reset.ui.authcodeinput", (event) => {
+				setTimeout(() => {
+					if (this.node && !event.defaultPrevented) this.#refresh();
+				}, 0);
+			});
+			this.listen(this.node, "focus.ui.authcodeinput", () => this.#focusInput());
+			this.listen(this.node, "input.ui.authcodeinput change.ui.authcodeinput", (event) => {
 				if (!event.skipUpdate) this.#refresh();
 			});
 			this.#observer = new MutationObserver(() => {

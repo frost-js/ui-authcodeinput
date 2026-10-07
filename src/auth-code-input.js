@@ -47,7 +47,6 @@ export default class AuthCodeInput extends BaseComponent {
     #length;
     #observer = null;
     #regExp = null;
-    #resetHandler = null;
     #segments = null;
     #tabIndex;
 
@@ -126,11 +125,6 @@ export default class AuthCodeInput extends BaseComponent {
 
         this.#observer?.disconnect();
         $.remove(this.#container);
-        $.removeEvent(this.node, 'focus.ui.authcodeinput input.ui.authcodeinput change.ui.authcodeinput');
-
-        if (this.#form && this.#resetHandler) {
-            $.removeEvent(this.#form, 'reset.ui.authcodeinput', this.#resetHandler);
-        }
 
         if (this.#hidden) {
             $.addClass(this.node, this.constructor.classes.hide);
@@ -155,7 +149,6 @@ export default class AuthCodeInput extends BaseComponent {
         this.#inputs = null;
         this.#observer = null;
         this.#regExp = null;
-        this.#resetHandler = null;
         this.#segments = null;
 
         super.dispose();
@@ -224,19 +217,18 @@ export default class AuthCodeInput extends BaseComponent {
      */
     #events() {
         if (this.#form) {
-            this.#resetHandler = (event) => {
+            this.listen(this.#form, 'reset.ui.authcodeinput', (event) => {
                 setTimeout(() => {
                     if (this.node && !event.defaultPrevented) {
                         this.#refresh();
                     }
                 }, 0);
-            };
-
-            $.addEvent(this.#form, 'reset.ui.authcodeinput', this.#resetHandler);
+            });
         }
 
-        $.addEvent(this.node, 'focus.ui.authcodeinput', () => this.#focusInput());
-        $.addEvent(this.node, 'input.ui.authcodeinput change.ui.authcodeinput', (event) => {
+        this.listen(this.node, 'focus.ui.authcodeinput', () => this.#focusInput());
+
+        this.listen(this.node, 'input.ui.authcodeinput change.ui.authcodeinput', (event) => {
             if (!event.skipUpdate) {
                 this.#refresh();
             }
