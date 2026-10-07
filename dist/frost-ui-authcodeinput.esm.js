@@ -67,7 +67,7 @@ var AuthCodeInput = class extends BaseComponent {
 	* @throws {TypeError} When the node is not an input element.
 	*/
 	constructor(node, options) {
-		if (!$.is(node, "input")) throw new TypeError("AuthCodeInput must be created on an input element.");
+		if (!$._isElement(node) || !$.is(node, "input")) throw new TypeError("AuthCodeInput must be created on an input element.");
 		super(node, options);
 		try {
 			this.#form = $.getProperty(this.node, "form");
