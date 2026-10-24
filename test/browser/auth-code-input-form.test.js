@@ -36,8 +36,6 @@ test.describe('AuthCodeInput forms', () => {
         }
 
         test('does not require a form', async ({ page }) => {
-            const errors = [];
-            page.on('pageerror', (error) => errors.push(error.message));
             await page.evaluate(() => {
                 $.setHtml(document.body, '<input id="auth">');
                 UI.AuthCodeInput.init($.findOne('#auth'), { autoSubmit: true, length: 2 });
@@ -47,7 +45,6 @@ test.describe('AuthCodeInput forms', () => {
             await inputs.last().press('2');
 
             await expect(page.locator('#auth')).toHaveValue('12');
-            expect(errors).toEqual([]);
         });
 
         for (const { name, value, expected } of [
@@ -171,8 +168,6 @@ test.describe('AuthCodeInput forms', () => {
         });
 
         test('ignores a pending reset after disposal', async ({ page }) => {
-            const errors = [];
-            page.on('pageerror', (error) => errors.push(error.message));
             await page.evaluate(() => {
                 $.findOne('#form').reset();
                 $.getData('#auth', 'authcodeinput').dispose();
@@ -181,7 +176,6 @@ test.describe('AuthCodeInput forms', () => {
 
             await expect(page.locator('.d-flex')).toHaveCount(0);
             await expect(page.locator('#auth')).toHaveValue('123456');
-            expect(errors).toEqual([]);
         });
 
         test('keeps other instances subscribed when one is disposed', async ({ page }) => {

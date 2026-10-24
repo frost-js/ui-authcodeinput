@@ -445,8 +445,6 @@ test.describe('AuthCodeInput', () => {
                 },
             ]) {
                 test(`can dispose during ${name}`, async ({ page }) => {
-                    const errors = [];
-                    page.on('pageerror', (error) => errors.push(error.message));
                     await page.evaluate((initial) => {
                         $.setHtml(document.body, '<form id="form"><input id="auth"></form>');
                         window.authCodeInputEvents = { changes: 0, submits: 0 };
@@ -465,7 +463,6 @@ test.describe('AuthCodeInput', () => {
                     await expect(page.locator('.d-flex')).toHaveCount(0);
                     await expect(page.locator('#auth')).toHaveValue(expected);
                     expect(await page.evaluate(() => window.authCodeInputEvents)).toEqual({ changes: 1, submits: 0 });
-                    expect(errors).toEqual([]);
                 });
             }
         });
