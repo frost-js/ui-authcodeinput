@@ -1,5 +1,5 @@
 const $ = globalThis.fQuery;
-const UI = globalThis.UI;
+const { AuthCodeInput } = globalThis.UI;
 const themeKey = 'frostui-authcodeinput-demo-theme';
 
 const setTheme = (theme) => {
@@ -70,7 +70,7 @@ $.ready(() => {
         const method = $.getDataset(event.currentTarget, 'demoMethod');
         const instance = method === 'dispose' ?
             $.getData('#methods-code', 'authcodeinput') :
-            UI.AuthCodeInput.init($.findOne('#methods-code'));
+            AuthCodeInput.init($.findOne('#methods-code'));
 
         switch (method) {
             case 'init':
