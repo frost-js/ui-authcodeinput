@@ -46,6 +46,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 
 //#endregion
 //#region src/auth-code-input.js
+	var window = _fr0st_query.default.getWindow();
 	var ariaAttributes = [
 		"aria-describedby",
 		"aria-errormessage",
@@ -198,7 +199,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		*/
 		#events() {
 			if (this.#form) this.listen(this.#form, "reset.ui.authcodeinput", (event) => {
-				setTimeout(() => {
+				window.setTimeout(() => {
 					if (this.node && !event.defaultPrevented) this.#refresh();
 				}, 0);
 			});
@@ -206,7 +207,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			this.listen(this.node, "input.ui.authcodeinput change.ui.authcodeinput", (event) => {
 				if (!event.skipUpdate) this.#refresh();
 			});
-			this.#observer = new MutationObserver(() => {
+			this.#observer = new window.MutationObserver(() => {
 				if (!this.node) return;
 				this.#refreshState();
 			});

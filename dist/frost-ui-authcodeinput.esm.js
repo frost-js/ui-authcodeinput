@@ -14,6 +14,7 @@ function getValidCharacters(value, regExp) {
 
 //#endregion
 //#region src/auth-code-input.js
+var window = $.getWindow();
 var ariaAttributes = [
 	"aria-describedby",
 	"aria-errormessage",
@@ -166,7 +167,7 @@ var AuthCodeInput = class extends BaseComponent {
 	*/
 	#events() {
 		if (this.#form) this.listen(this.#form, "reset.ui.authcodeinput", (event) => {
-			setTimeout(() => {
+			window.setTimeout(() => {
 				if (this.node && !event.defaultPrevented) this.#refresh();
 			}, 0);
 		});
@@ -174,7 +175,7 @@ var AuthCodeInput = class extends BaseComponent {
 		this.listen(this.node, "input.ui.authcodeinput change.ui.authcodeinput", (event) => {
 			if (!event.skipUpdate) this.#refresh();
 		});
-		this.#observer = new MutationObserver(() => {
+		this.#observer = new window.MutationObserver(() => {
 			if (!this.node) return;
 			this.#refreshState();
 		});

@@ -2,6 +2,8 @@ import $ from '@fr0st/query';
 import { BaseComponent } from '@fr0st/ui';
 import { getValidCharacters } from './helpers.js';
 
+const window = $.getWindow();
+
 const ariaAttributes = [
     'aria-describedby',
     'aria-errormessage',
@@ -218,7 +220,7 @@ export default class AuthCodeInput extends BaseComponent {
     #events() {
         if (this.#form) {
             this.listen(this.#form, 'reset.ui.authcodeinput', (event) => {
-                setTimeout(() => {
+                window.setTimeout(() => {
                     if (this.node && !event.defaultPrevented) {
                         this.#refresh();
                     }
@@ -234,7 +236,7 @@ export default class AuthCodeInput extends BaseComponent {
             }
         });
 
-        this.#observer = new MutationObserver(() => {
+        this.#observer = new window.MutationObserver(() => {
             if (!this.node) {
                 return;
             }
