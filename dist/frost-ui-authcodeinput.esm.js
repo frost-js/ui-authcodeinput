@@ -1,7 +1,7 @@
 import { BaseComponent, initComponent } from "@fr0st/ui";
 import $ from "@fr0st/query";
 
-//#region src/helpers.js
+// src/helpers.js
 /**
 * Gets the valid characters from a value.
 * @param {string} value The value to filter.
@@ -12,8 +12,7 @@ function getValidCharacters(value, regExp) {
 	return Array.from(value).filter((char) => char.match(regExp));
 }
 
-//#endregion
-//#region src/auth-code-input.js
+// src/auth-code-input.js
 var window = $.getWindow();
 var ariaAttributes = [
 	"aria-describedby",
@@ -345,11 +344,9 @@ var AuthCodeInput = class extends BaseComponent {
 	}
 };
 
-//#endregion
-//#region src/index.js
+// src/index.js
 initComponent("authcodeinput", AuthCodeInput);
 var src_default = AuthCodeInput;
 
-//#endregion
 export { src_default as default };
 //# sourceMappingURL=frost-ui-authcodeinput.esm.js.map

@@ -4,7 +4,7 @@
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.UI = global.UI || {}), global.UI,global.fQuery));
 })(this, function(exports, _fr0st_ui, _fr0st_query) {
 Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-//#region \0rolldown/runtime.js
+// \0rolldown/runtime.js
 	var __create = Object.create;
 	var __defProp = Object.defineProperty;
 	var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -30,10 +30,9 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 		enumerable: true
 	}) : target, mod));
 
-//#endregion
 _fr0st_query = __toESM(_fr0st_query, 1);
 
-//#region src/helpers.js
+// src/helpers.js
 /**
 	* Gets the valid characters from a value.
 	* @param {string} value The value to filter.
@@ -44,8 +43,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		return Array.from(value).filter((char) => char.match(regExp));
 	}
 
-//#endregion
-//#region src/auth-code-input.js
+// src/auth-code-input.js
 	var window = _fr0st_query.default.getWindow();
 	var ariaAttributes = [
 		"aria-describedby",
@@ -377,12 +375,10 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		}
 	};
 
-//#endregion
-//#region src/index.js
+// src/index.js
 	(0, _fr0st_ui.initComponent)("authcodeinput", AuthCodeInput);
 	var src_default = AuthCodeInput;
 
-//#endregion
 exports.AuthCodeInput = src_default;
 });
 //# sourceMappingURL=frost-ui-authcodeinput.js.map
